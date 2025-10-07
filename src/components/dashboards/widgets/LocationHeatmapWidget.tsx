@@ -57,8 +57,8 @@ export const LocationHeatmapWidget = ({ config, onUpdate }: LocationHeatmapWidge
   };
 
   return (
-    <>
-      <CardHeader className="pb-2">
+    <div className="h-full flex flex-col">
+      <CardHeader className="pb-2 flex-shrink-0">
         <CardTitle className="text-sm font-medium">Location Density</CardTitle>
         <Select
           value={config.formId}
@@ -76,7 +76,7 @@ export const LocationHeatmapWidget = ({ config, onUpdate }: LocationHeatmapWidge
           </SelectContent>
         </Select>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 flex flex-col justify-center overflow-auto">
         <div className="space-y-2">
           {locationData.map((item, idx) => (
             <div key={idx} className="flex items-center justify-between">
@@ -89,6 +89,6 @@ export const LocationHeatmapWidget = ({ config, onUpdate }: LocationHeatmapWidge
           ))}
         </div>
       </CardContent>
-    </>
+    </div>
   );
 };

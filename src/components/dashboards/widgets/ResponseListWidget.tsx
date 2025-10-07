@@ -41,8 +41,8 @@ export const ResponseListWidget = ({ config, onUpdate }: ResponseListWidgetProps
   };
 
   return (
-    <>
-      <CardHeader className="pb-2">
+    <div className="h-full flex flex-col">
+      <CardHeader className="pb-2 flex-shrink-0">
         <CardTitle className="text-sm font-medium">Recent Responses</CardTitle>
         <Select
           value={config.formId}
@@ -60,8 +60,8 @@ export const ResponseListWidget = ({ config, onUpdate }: ResponseListWidgetProps
           </SelectContent>
         </Select>
       </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-48">
+      <CardContent className="flex-1 min-h-0">
+        <ScrollArea className="h-full">
           <div className="space-y-2">
             {responses.map((response) => (
               <div key={response.id} className="p-2 border rounded-lg hover:bg-accent transition-colors">
@@ -77,6 +77,6 @@ export const ResponseListWidget = ({ config, onUpdate }: ResponseListWidgetProps
           </div>
         </ScrollArea>
       </CardContent>
-    </>
+    </div>
   );
 };

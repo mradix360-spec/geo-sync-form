@@ -79,8 +79,8 @@ export const PieChartWidget = ({ config, onUpdate }: PieChartWidgetProps) => {
   };
 
   return (
-    <>
-      <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
+    <div className="h-full flex flex-col">
+      <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0 flex-shrink-0">
         <CardTitle className="text-sm font-medium flex-1 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
           {config.title || "Distribution"}
         </CardTitle>
@@ -92,8 +92,8 @@ export const PieChartWidget = ({ config, onUpdate }: PieChartWidgetProps) => {
           showColors={true}
         />
       </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={250}>
+      <CardContent className="flex-1 flex flex-col min-h-0">
+        <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <defs>
               {COLORS.map((color, index) => (
@@ -133,6 +133,6 @@ export const PieChartWidget = ({ config, onUpdate }: PieChartWidgetProps) => {
           </PieChart>
         </ResponsiveContainer>
       </CardContent>
-    </>
+    </div>
   );
 };

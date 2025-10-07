@@ -37,13 +37,13 @@ export const QuickStatsWidget = ({ config, onUpdate }: QuickStatsWidgetProps) =>
   };
 
   return (
-    <>
-      <CardHeader className="pb-3">
+    <div className="h-full flex flex-col">
+      <CardHeader className="pb-3 flex-shrink-0">
         <CardTitle className="text-sm font-medium bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
           Quick Overview
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 flex flex-col justify-center">
         <div className="grid grid-cols-2 gap-3">
           <div className="p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 hover:shadow-lg hover:scale-105 transition-all duration-300 group animate-fade-in">
             <div className="flex items-center gap-3">
@@ -94,6 +94,6 @@ export const QuickStatsWidget = ({ config, onUpdate }: QuickStatsWidgetProps) =>
           </div>
         </div>
       </CardContent>
-    </>
+    </div>
   );
 };

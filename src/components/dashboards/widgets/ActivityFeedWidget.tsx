@@ -27,12 +27,12 @@ export const ActivityFeedWidget = ({ config, onUpdate }: ActivityFeedWidgetProps
   };
 
   return (
-    <>
-      <CardHeader className="pb-2">
+    <div className="h-full flex flex-col">
+      <CardHeader className="pb-2 flex-shrink-0">
         <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
       </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-64">
+      <CardContent className="flex-1 min-h-0">
+        <ScrollArea className="h-full">
           <div className="space-y-3">
             {activities.map((activity) => (
               <div key={activity.id} className="flex gap-3 items-start">
@@ -54,6 +54,6 @@ export const ActivityFeedWidget = ({ config, onUpdate }: ActivityFeedWidgetProps
           </div>
         </ScrollArea>
       </CardContent>
-    </>
+    </div>
   );
 };

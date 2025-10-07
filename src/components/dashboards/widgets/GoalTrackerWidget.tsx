@@ -44,8 +44,8 @@ export const GoalTrackerWidget = ({ config, onUpdate }: GoalTrackerWidgetProps) 
   const percentage = Math.min((current / target) * 100, 100);
 
   return (
-    <>
-      <CardHeader className="pb-2">
+    <div className="h-full flex flex-col">
+      <CardHeader className="pb-2 flex-shrink-0">
         <CardTitle className="text-sm font-medium">Goal Tracker</CardTitle>
         <Select
           value={config.formId}
@@ -63,7 +63,7 @@ export const GoalTrackerWidget = ({ config, onUpdate }: GoalTrackerWidgetProps) 
           </SelectContent>
         </Select>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 flex flex-col justify-center">
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="target">Target</Label>
@@ -90,6 +90,6 @@ export const GoalTrackerWidget = ({ config, onUpdate }: GoalTrackerWidgetProps) 
           </div>
         </div>
       </CardContent>
-    </>
+    </div>
   );
 };

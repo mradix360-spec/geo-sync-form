@@ -40,8 +40,8 @@ export const CalendarWidget = ({ config, onUpdate }: CalendarWidgetProps) => {
   };
 
   return (
-    <>
-      <CardHeader className="pb-2">
+    <div className="h-full flex flex-col">
+      <CardHeader className="pb-2 flex-shrink-0">
         <CardTitle className="text-sm font-medium">Response Calendar</CardTitle>
         <Select
           value={config.formId}
@@ -59,7 +59,7 @@ export const CalendarWidget = ({ config, onUpdate }: CalendarWidgetProps) => {
           </SelectContent>
         </Select>
       </CardHeader>
-      <CardContent className="flex justify-center">
+      <CardContent className="flex-1 flex items-center justify-center">
         <Calendar
           mode="single"
           selected={selectedDate}
@@ -70,6 +70,6 @@ export const CalendarWidget = ({ config, onUpdate }: CalendarWidgetProps) => {
           }}
         />
       </CardContent>
-    </>
+    </div>
   );
 };

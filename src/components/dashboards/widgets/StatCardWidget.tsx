@@ -107,8 +107,8 @@ export const StatCardWidget = ({ config, onUpdate }: StatCardWidgetProps) => {
   };
 
   return (
-    <>
-      <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
+    <div className="h-full flex flex-col">
+      <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0 flex-shrink-0">
         <CardTitle className="text-sm font-medium flex-1 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
           {config.title || "Statistic"}
         </CardTitle>
@@ -122,7 +122,7 @@ export const StatCardWidget = ({ config, onUpdate }: StatCardWidgetProps) => {
           showFilters={true}
         />
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 flex flex-col justify-center">
         <div className="flex items-baseline gap-3 mb-3">
           <div className="text-4xl font-bold bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent animate-scale-in" style={{ 
             color: config.color,
@@ -155,6 +155,6 @@ export const StatCardWidget = ({ config, onUpdate }: StatCardWidgetProps) => {
           <p className="text-xs text-muted-foreground/70">vs previous 30 days</p>
         </div>
       </CardContent>
-    </>
+    </div>
   );
 };

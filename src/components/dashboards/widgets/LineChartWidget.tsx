@@ -58,8 +58,8 @@ export const LineChartWidget = ({ config, onUpdate }: LineChartWidgetProps) => {
   };
 
   return (
-    <>
-      <CardHeader className="pb-2">
+    <div className="h-full flex flex-col">
+      <CardHeader className="pb-2 flex-shrink-0">
         <CardTitle className="text-sm font-medium">30-Day Trend</CardTitle>
         <Select
           value={config.formId}
@@ -77,8 +77,8 @@ export const LineChartWidget = ({ config, onUpdate }: LineChartWidgetProps) => {
           </SelectContent>
         </Select>
       </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={200}>
+      <CardContent className="flex-1 flex flex-col min-h-0">
+        <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
@@ -88,6 +88,6 @@ export const LineChartWidget = ({ config, onUpdate }: LineChartWidgetProps) => {
           </LineChart>
         </ResponsiveContainer>
       </CardContent>
-    </>
+    </div>
   );
 };

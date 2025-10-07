@@ -26,11 +26,11 @@ export const UserStatsWidget = ({ config, onUpdate }: UserStatsWidgetProps) => {
   };
 
   return (
-    <>
-      <CardHeader className="pb-2">
+    <div className="h-full flex flex-col">
+      <CardHeader className="pb-2 flex-shrink-0">
         <CardTitle className="text-sm font-medium">User Statistics</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 flex flex-col justify-center">
         <div className="grid grid-cols-3 gap-4">
           <div className="text-center">
             <Users className="h-6 w-6 mx-auto text-primary mb-1" />
@@ -49,6 +49,6 @@ export const UserStatsWidget = ({ config, onUpdate }: UserStatsWidgetProps) => {
           </div>
         </div>
       </CardContent>
-    </>
+    </div>
   );
 };

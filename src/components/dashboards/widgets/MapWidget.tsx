@@ -55,8 +55,8 @@ export const MapWidget = ({ config, onUpdate }: MapWidgetProps) => {
   };
 
   return (
-    <>
-      <CardHeader className="pb-2">
+    <div className="h-full flex flex-col">
+      <CardHeader className="pb-2 flex-shrink-0">
         <CardTitle className="text-sm font-medium">Map View</CardTitle>
         <Select
           value={config.mapId}
@@ -74,11 +74,11 @@ export const MapWidget = ({ config, onUpdate }: MapWidgetProps) => {
           </SelectContent>
         </Select>
       </CardHeader>
-      <CardContent className="p-0">
-        <div className="h-64">
+      <CardContent className="p-0 flex-1 min-h-0">
+        <div className="h-full">
           <MapView responses={responses} />
         </div>
       </CardContent>
-    </>
+    </div>
   );
 };

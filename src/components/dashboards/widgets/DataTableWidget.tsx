@@ -52,8 +52,8 @@ export const DataTableWidget = ({ config, onUpdate }: DataTableWidgetProps) => {
   };
 
   return (
-    <>
-      <CardHeader className="pb-2">
+    <div className="h-full flex flex-col">
+      <CardHeader className="pb-2 flex-shrink-0">
         <CardTitle className="text-sm font-medium">Data Table</CardTitle>
         <Select
           value={config.formId}
@@ -71,7 +71,7 @@ export const DataTableWidget = ({ config, onUpdate }: DataTableWidgetProps) => {
           </SelectContent>
         </Select>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 min-h-0 overflow-auto">
         <div className="rounded-md border">
           <Table>
             <TableHeader>
@@ -95,6 +95,6 @@ export const DataTableWidget = ({ config, onUpdate }: DataTableWidgetProps) => {
           </Table>
         </div>
       </CardContent>
-    </>
+    </div>
   );
 };
