@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -16,7 +16,7 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 interface MapViewProps {
-  responses: any[];
+  responses?: any[];
 }
 
 // Component to fit bounds to all markers
@@ -24,9 +24,9 @@ function FitBounds({ responses }: { responses: any[] }) {
   const map = useMap();
 
   useEffect(() => {
-    if (responses.length > 0) {
+    if (responses && responses.length > 0) {
       const validCoords = responses
-        .filter(r => r.geojson?.geometry?.coordinates)
+        .filter(r => r?.geojson?.geometry?.coordinates)
         .map(r => {
           const coords = r.geojson.geometry.coordinates;
           return [coords[1], coords[0]] as [number, number]; // Leaflet uses [lat, lng]
@@ -42,49 +42,58 @@ function FitBounds({ responses }: { responses: any[] }) {
   return null;
 }
 
-const MapView = ({ responses }: MapViewProps) => {
+const MapView = ({ responses = [] }: MapViewProps) => {
   const defaultCenter: [number, number] = [0, 0];
   const defaultZoom = 2;
+  const [mapKey] = useState(() => `map-${Date.now()}`);
+
+  // Safely filter valid responses
+  const validResponses = responses?.filter(r => r?.geojson?.geometry?.coordinates) || [];
 
   return (
     <div className="relative w-full h-[600px] rounded-lg overflow-hidden border border-border">
       <MapContainer
+        key={mapKey}
         center={defaultCenter}
         zoom={defaultZoom}
         className="h-full w-full"
         zoomControl={true}
+        scrollWheelZoom={true}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         
-        <FitBounds responses={responses} />
+        <FitBounds responses={validResponses} />
 
-        {responses.map((response, index) => {
-          if (!response.geojson?.geometry?.coordinates) return null;
-          
-          const coords = response.geojson.geometry.coordinates;
-          const position: [number, number] = [coords[1], coords[0]]; // Leaflet uses [lat, lng]
+        {validResponses.map((response, index) => {
+          try {
+            const coords = response.geojson.geometry.coordinates;
+            const position: [number, number] = [coords[1], coords[0]]; // Leaflet uses [lat, lng]
 
-          return (
-            <Marker key={index} position={position}>
-              <Popup>
-                <div className="text-sm">
-                  <strong>Response #{index + 1}</strong>
-                  {response.geojson.properties && (
-                    <div className="mt-2 space-y-1">
-                      {Object.entries(response.geojson.properties).map(([key, value]) => (
-                        <div key={key}>
-                          <span className="font-medium">{key}:</span> {String(value)}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </Popup>
-            </Marker>
-          );
+            return (
+              <Marker key={`marker-${index}-${coords[0]}-${coords[1]}`} position={position}>
+                <Popup>
+                  <div className="text-sm">
+                    <strong>Response #{index + 1}</strong>
+                    {response.geojson?.properties && (
+                      <div className="mt-2 space-y-1">
+                        {Object.entries(response.geojson.properties).map(([key, value]) => (
+                          <div key={key}>
+                            <span className="font-medium">{key}:</span> {String(value)}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          } catch (error) {
+            console.error('Error rendering marker:', error);
+            return null;
+          }
         })}
       </MapContainer>
     </div>
