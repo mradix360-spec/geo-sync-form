@@ -7,6 +7,39 @@ import { toast } from "@/hooks/use-toast";
 import MapView from "@/components/MapView";
 import { Card } from "@/components/ui/card";
 
+const BASEMAPS = [
+  {
+    id: 'osm',
+    name: 'OpenStreetMap',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; OpenStreetMap contributors'
+  },
+  {
+    id: 'satellite',
+    name: 'Satellite',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: '&copy; Esri'
+  },
+  {
+    id: 'topo',
+    name: 'Topographic',
+    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; OpenTopoMap'
+  },
+  {
+    id: 'dark',
+    name: 'Dark',
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; CARTO'
+  },
+  {
+    id: 'light',
+    name: 'Light',
+    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; CARTO'
+  },
+];
+
 interface MapConfig {
   title: string;
   description: string;
@@ -58,10 +91,23 @@ const MapViewerById = () => {
       if (mapError) throw mapError;
 
       const config = mapData.config as any;
+      
+      // Convert basemap ID to full basemap object
+      let basemapConfig = BASEMAPS[0]; // default to OSM
+      if (config.basemap) {
+        const foundBasemap = BASEMAPS.find(b => b.id === config.basemap);
+        if (foundBasemap) {
+          basemapConfig = foundBasemap;
+        }
+      }
+      
       setMapConfig({
         title: mapData.title,
         description: mapData.description,
-        config,
+        config: {
+          ...config,
+          basemap: basemapConfig
+        },
       });
 
       // Load responses for all visible layers
@@ -141,8 +187,8 @@ const MapViewerById = () => {
       <div className="flex-1">
         <MapView
           responses={responses}
-          basemapUrl={mapConfig.config.basemap?.url}
-          basemapAttribution={mapConfig.config.basemap?.attribution}
+          basemapUrl={mapConfig.config.basemap.url}
+          basemapAttribution={mapConfig.config.basemap.attribution}
         />
       </div>
     </div>
