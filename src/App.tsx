@@ -35,6 +35,7 @@ import FormBuilder from "./pages/FormBuilder";
 import FormSubmit from "./pages/FormSubmit";
 import MapViewer from "./pages/MapViewer";
 import MapBuilder from "./pages/MapBuilder";
+import DashboardBuilder from "./pages/DashboardBuilder";
 import PublicFormSubmit from "./pages/public/PublicFormSubmit";
 import PublicMapViewer from "./pages/public/PublicMapViewer";
 import EmbedFormViewer from "./pages/embed/EmbedFormViewer";
@@ -129,6 +130,14 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <MapBuilder />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/dashboard-builder/:dashboardId?" 
+                    element={
+                      <ProtectedRoute>
+                        <DashboardBuilder />
                       </ProtectedRoute>
                     } 
                   />

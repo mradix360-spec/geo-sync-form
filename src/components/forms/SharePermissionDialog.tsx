@@ -19,7 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 interface SharePermissionDialogProps {
   formId: string;
-  objectType?: 'form' | 'map';
+  objectType?: 'form' | 'map' | 'dashboard';
   currentShareType?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
