@@ -41,8 +41,8 @@ const App = () => (
               
               {/* Other routes */}
               <Route path="/form-builder" element={<FormBuilder />} />
-              <Route path="/form-submit" element={<FormSubmit />} />
-              <Route path="/map-viewer" element={<MapViewer />} />
+              <Route path="/form/:formId/submit" element={<FormSubmit />} />
+              <Route path="/form/:formId/map" element={<MapViewer />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

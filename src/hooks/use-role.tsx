@@ -15,6 +15,10 @@ export const useRole = () => {
   const canCreateForms = () => hasRole(['super_admin', 'org_admin', 'analyst']);
   const canAssignForms = () => hasRole(['super_admin', 'org_admin', 'analyst']);
   const canPublishForms = () => hasRole(['super_admin', 'org_admin', 'analyst']);
+  const canCreateMaps = () => hasRole(['super_admin', 'org_admin', 'analyst']);
+  const canCreateDashboards = () => hasRole(['super_admin', 'org_admin', 'analyst']);
+  const canViewMaps = () => hasRole(['super_admin', 'org_admin', 'analyst']);
+  const canViewDashboards = () => hasRole(['super_admin', 'org_admin', 'analyst']);
 
   return {
     hasRole,
@@ -24,6 +28,10 @@ export const useRole = () => {
     canCreateForms,
     canAssignForms,
     canPublishForms,
+    canCreateMaps,
+    canCreateDashboards,
+    canViewMaps,
+    canViewDashboards,
     roles: user?.roles || []
   };
 };

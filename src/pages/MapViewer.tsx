@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Download } from "lucide-react";
@@ -8,8 +8,7 @@ import MapView from "@/components/MapView";
 
 const MapViewer = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const formId = searchParams.get('formId');
+  const { formId } = useParams<{ formId: string }>();
 
   const [responses, setResponses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

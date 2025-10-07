@@ -17,13 +17,7 @@ const Dashboard = () => {
       navigate("/auth");
       return;
     }
-
-    // Redirect analysts/admins to the new dashboard
-    if (isAnalyst() || isAdmin()) {
-      navigate("/dashboard/forms");
-      return;
-    }
-  }, [user, isAnalyst, isAdmin, navigate]);
+  }, [user, navigate]);
 
   const handleLogout = () => {
     logout();
