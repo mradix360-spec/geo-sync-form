@@ -31,8 +31,8 @@ const MapView = ({ responses = [], basemapUrl, basemapAttribution }: MapViewProp
     try {
       if (containerRef.current && !mapRef.current) {
         mapRef.current = L.map(containerRef.current, {
-          center: [0, 0],
-          zoom: 2,
+          center: [0, 20],
+          zoom: 3,
           zoomControl: true,
           scrollWheelZoom: true,
         });
@@ -130,7 +130,7 @@ const MapView = ({ responses = [], basemapUrl, basemapAttribution }: MapViewProp
         const bounds = L.latLngBounds(validCoords);
         map.fitBounds(bounds, { padding: [50, 50] });
       } else {
-        map.setView([0, 0], 2);
+        map.setView([0, 20], 3);
       }
     } catch (err) {
       console.error('Error updating Leaflet markers:', err);
