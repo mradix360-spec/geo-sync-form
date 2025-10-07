@@ -385,6 +385,7 @@ const MapBuilder = () => {
       color: l.color,
       styleRule: l.styleRule,
       layerTitle: l.formTitle,
+      layerId: l.id,
     })));
 
   if (loading) {
@@ -508,6 +509,9 @@ const MapBuilder = () => {
               basemapUrl={selectedBasemap.url}
               basemapAttribution={selectedBasemap.attribution}
               enableClustering={enableClustering}
+              layers={layers}
+              onToggleLayer={handleToggleLayer}
+              showControls={true}
             />
           </main>
         </div>

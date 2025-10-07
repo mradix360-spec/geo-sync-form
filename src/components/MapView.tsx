@@ -2,6 +2,9 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet.markercluster';
 import { createCustomIcon, SymbolType, SymbolSize } from '@/lib/mapSymbols';
+import { MapLayerControl } from '@/components/maps/MapLayerControl';
+import { MapLegend } from '@/components/maps/MapLegend';
+import { MapSearchBar } from '@/components/maps/MapSearchBar';
 
 interface StyleRule {
   field: string;
@@ -16,6 +19,7 @@ interface ResponseWithSymbol {
   color?: string;
   styleRule?: StyleRule;
   layerTitle?: string;
+  layerId?: string;
 }
 
 interface MapViewProps {
@@ -23,13 +27,41 @@ interface MapViewProps {
   basemapUrl?: string;
   basemapAttribution?: string;
   enableClustering?: boolean;
+  layers?: Array<{
+    id: string;
+    formTitle: string;
+    visible: boolean;
+    color: string;
+    symbolType?: SymbolType;
+    styleRule?: StyleRule;
+    responses?: any[];
+  }>;
+  onToggleLayer?: (layerId: string) => void;
+  showControls?: boolean;
 }
 
-const MapView = ({ responses = [], basemapUrl, basemapAttribution, enableClustering = true }: MapViewProps) => {
+const MapView = ({ 
+  responses = [], 
+  basemapUrl, 
+  basemapAttribution, 
+  enableClustering = true,
+  layers = [],
+  onToggleLayer,
+  showControls = false,
+}: MapViewProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.MarkerClusterGroup | L.LayerGroup | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+
+  // Handle search result selection
+  const handleSearchResultSelect = (coordinates: [number, number]) => {
+    if (mapRef.current) {
+      mapRef.current.flyTo(coordinates, 16, {
+        duration: 1.5,
+      });
+    }
+  };
 
   // Initialize map once
   useEffect(() => {
@@ -247,6 +279,27 @@ const MapView = ({ responses = [], basemapUrl, basemapAttribution, enableCluster
   return (
     <div className="relative w-full h-full z-0">
       <div ref={containerRef} className="h-full w-full z-0" />
+      
+      {showControls && (
+        <>
+          <MapLayerControl 
+            layers={layers.map(l => ({
+              id: l.id,
+              formTitle: l.formTitle,
+              visible: l.visible,
+              color: l.color,
+            }))}
+            onToggleLayer={onToggleLayer || (() => {})}
+          />
+          
+          <MapLegend layers={layers} />
+          
+          <MapSearchBar 
+            responses={responses}
+            onResultSelect={handleSearchResultSelect}
+          />
+        </>
+      )}
     </div>
   );
 };
