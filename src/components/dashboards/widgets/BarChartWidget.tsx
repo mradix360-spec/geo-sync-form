@@ -103,8 +103,8 @@ export const BarChartWidget = ({ config, onUpdate }: BarChartWidgetProps) => {
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0 flex-shrink-0">
+    <>
+      <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
         <CardTitle className="text-sm font-medium flex-1 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
           {config.title || "Bar Chart"}
         </CardTitle>
@@ -117,8 +117,8 @@ export const BarChartWidget = ({ config, onUpdate }: BarChartWidgetProps) => {
           showColors={true}
         />
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col min-h-0">
-        <ResponsiveContainer width="100%" height="100%">
+      <CardContent>
+        <ResponsiveContainer width="100%" height={250}>
           <BarChart data={data}>
             <defs>
               <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
@@ -155,6 +155,6 @@ export const BarChartWidget = ({ config, onUpdate }: BarChartWidgetProps) => {
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
-    </div>
+    </>
   );
 };
