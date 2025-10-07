@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Plus, BarChart3 } from "lucide-react";
+import { EmptyState } from "@/components/shared/EmptyState";
 
 const DashboardsView = () => {
   const navigate = useNavigate();
@@ -18,12 +19,13 @@ const DashboardsView = () => {
         </Button>
       </div>
 
-      <div className="text-center py-12">
-        <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-        <h3 className="text-lg font-semibold mb-2">No dashboards yet</h3>
-        <p className="text-muted-foreground mb-4">Create your first dashboard to analyze form responses</p>
-        <Button onClick={() => navigate("/dashboard/dashboards/new")}>Create Your First Dashboard</Button>
-      </div>
+      <EmptyState
+        icon={BarChart3}
+        title="No dashboards yet"
+        description="Create your first dashboard to analyze form responses"
+        actionLabel="Create Your First Dashboard"
+        onAction={() => navigate("/dashboard/dashboards/new")}
+      />
     </div>
   );
 };
