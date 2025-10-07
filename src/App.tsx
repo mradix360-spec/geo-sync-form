@@ -56,16 +56,6 @@ function App() {
                   <Route path="/auth/login" element={<Login />} />
                   <Route path="/auth/register" element={<Register />} />
 
-                  {/* Role-based redirect */}
-                  <Route 
-                    path="/dashboard" 
-                    element={
-                      <ProtectedRoute>
-                        <RoleBasedRedirect />
-                      </ProtectedRoute>
-                    } 
-                  />
-
                   {/* Protected analyst routes */}
                   <Route 
                     path="/analyst" 
