@@ -5,6 +5,7 @@ import { useRole } from "@/hooks/use-role";
 import { FileText, Map, User, LogOut } from "lucide-react";
 import { SyncStatus } from "@/components/SyncStatus";
 import { Button } from "@/components/ui/button";
+import { syncService } from "@/lib/syncService";
 
 const FieldStaffLayout = () => {
   const navigate = useNavigate();
@@ -22,6 +23,9 @@ const FieldStaffLayout = () => {
     if (!hasAccess) {
       navigate("/analyst");
     }
+
+    // Initialize auto-sync
+    syncService.startAutoSync();
   }, [user, navigate]);
 
   const handleLogout = async () => {

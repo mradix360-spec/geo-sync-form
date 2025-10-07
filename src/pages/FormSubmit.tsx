@@ -13,6 +13,7 @@ import { offlineStorage } from "@/lib/offlineStorage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { LocationAccuracy } from "@/components/shared/LocationAccuracy";
 
 interface ValidationRule {
   type: 'min' | 'max' | 'pattern' | 'minLength' | 'maxLength';
@@ -83,8 +84,9 @@ const FormSubmit = () => {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [visibleFields, setVisibleFields] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [location, setLocation] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
   const [locationError, setLocationError] = useState<string>('');
+  const [watchId, setWatchId] = useState<number | null>(null);
 
   const handleBack = () => {
     const isFieldStaff = user?.roles.includes('field_staff');
@@ -98,6 +100,12 @@ const FormSubmit = () => {
     }
     loadForm();
     captureLocation();
+
+    return () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
   }, [formId]);
 
   // Evaluate conditional logic and calculate fields whenever formData changes
@@ -165,17 +173,44 @@ const FormSubmit = () => {
       return;
     }
 
+    // Get initial position
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setLocation({
           lat: position.coords.latitude,
           lng: position.coords.longitude,
+          accuracy: position.coords.accuracy,
         });
       },
       (error) => {
         setLocationError(`Location error: ${error.message}`);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
       }
     );
+
+    // Watch position for continuous updates
+    const id = navigator.geolocation.watchPosition(
+      (position) => {
+        setLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        });
+        setLocationError('');
+      },
+      (error) => {
+        console.error('Location watch error:', error);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 5000
+      }
+    );
+    setWatchId(id);
   };
 
   const evaluateCondition = (condition: Condition): boolean => {
@@ -510,6 +545,11 @@ const FormSubmit = () => {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
+          <LocationAccuracy 
+            accuracy={location?.accuracy}
+            lat={location?.lat}
+            lng={location?.lng}
+          />
         </div>
       </header>
 

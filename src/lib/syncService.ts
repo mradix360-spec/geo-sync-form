@@ -13,12 +13,20 @@ export const syncService = {
 
       if (error) throw error;
 
-      // Note: Forms are cached by the browser and service worker
-      // Additional caching logic can be added here if needed
+      // Cache forms for offline use
+      if (forms) {
+        for (const form of forms) {
+          await offlineStorage.cacheForm(form);
+        }
+      }
 
       return forms;
     } catch (error) {
       console.error('Error fetching forms:', error);
+      // Return cached forms if offline
+      if (!navigator.onLine) {
+        return await offlineStorage.getCachedForms();
+      }
       return [];
     }
   },
@@ -85,5 +93,41 @@ export const syncService = {
   async getPendingCount() {
     const pending = await offlineStorage.getPendingSubmissions();
     return pending.length;
+  },
+
+  // Auto-sync when coming back online
+  async startAutoSync() {
+    window.addEventListener('online', async () => {
+      console.log('Connection restored, auto-syncing...');
+      try {
+        const results = await this.pushPendingSubmissions();
+        if (results.success > 0) {
+          console.log(`Auto-synced ${results.success} submission(s)`);
+        }
+      } catch (error) {
+        console.error('Auto-sync failed:', error);
+      }
+    });
+  },
+
+  // Prefetch form for offline use
+  async prefetchForm(formId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('forms')
+        .select('*')
+        .eq('id', formId)
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        await offlineStorage.cacheForm(data);
+      }
+      return data;
+    } catch (error) {
+      console.error('Error prefetching form:', error);
+      // Try to get from cache
+      return await offlineStorage.getCachedForm(formId);
+    }
   }
 };

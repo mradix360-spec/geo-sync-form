@@ -1,8 +1,10 @@
-const CACHE_NAME = 'geosync-v3';
+const CACHE_NAME = 'geosync-v4';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/src/index.css'
+  '/src/index.css',
+  '/manifest.json',
+  '/favicon.ico'
 ];
 
 self.addEventListener('install', (event) => {
@@ -60,8 +62,8 @@ async function syncPendingSubmissions() {
   
   try {
     const db = await openDatabase();
-    const tx = db.transaction('pendingSubmissions', 'readonly');
-    const store = tx.objectStore('pendingSubmissions');
+    const tx = db.transaction('pending_submissions', 'readonly');
+    const store = tx.objectStore('pending_submissions');
     const pending = await store.getAll();
     
     const unsynced = pending.filter(sub => !sub.synced);
@@ -97,8 +99,8 @@ async function syncPendingSubmissions() {
         }, 3, 1000);
         
         // Mark as synced
-        const writeTx = db.transaction('pendingSubmissions', 'readwrite');
-        const writeStore = writeTx.objectStore('pendingSubmissions');
+        const writeTx = db.transaction('pending_submissions', 'readwrite');
+        const writeStore = writeTx.objectStore('pending_submissions');
         await writeStore.delete(submission.id);
         console.log('Successfully synced submission:', submission.id);
         
@@ -131,9 +133,15 @@ async function retryWithBackoff(fn, maxRetries, initialDelay) {
 
 async function openDatabase() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('geosync-offline', 1);
+    const request = indexedDB.open('geosync_offline', 2);
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains('pending_submissions')) {
+        db.createObjectStore('pending_submissions', { keyPath: 'id' });
+      }
+    };
   });
 }
 
