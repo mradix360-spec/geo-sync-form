@@ -22,14 +22,6 @@ serve(async (req) => {
       );
     }
 
-    // Validate password strength
-    if (password.length < 8) {
-      return new Response(
-        JSON.stringify({ error: 'Password must be at least 8 characters long' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -44,13 +36,10 @@ serve(async (req) => {
 
     if (existingUser) {
       return new Response(
-        JSON.stringify({ error: 'User with this email already exists' }),
+        JSON.stringify({ error: 'Email already registered' }),
         { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Hash password
-    const passwordHash = await bcrypt.hash(password);
 
     let orgId: string | null = null;
 
@@ -64,13 +53,13 @@ serve(async (req) => {
 
       if (orgError) {
         console.error('Organization creation error:', orgError);
-        return new Response(
-          JSON.stringify({ error: 'Failed to create organization' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        throw new Error('Failed to create organization');
       }
       orgId = orgData.id;
     }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password);
 
     // Create user
     const { data: userData, error: userError } = await supabaseClient
@@ -80,7 +69,7 @@ serve(async (req) => {
         password_hash: passwordHash,
         full_name: fullName,
         organisation_id: orgId,
-        is_active: true
+        is_active: true,
       })
       .select()
       .single();
@@ -99,7 +88,7 @@ serve(async (req) => {
       .from('user_roles')
       .insert({
         user_id: userData.id,
-        role: role
+        role: role,
       });
 
     if (roleError) {
@@ -110,27 +99,25 @@ serve(async (req) => {
     const token = btoa(JSON.stringify({
       userId: userData.id,
       email: userData.email,
-      exp: Date.now() + 86400000 // 24 hours
+      exp: Date.now() + 86400000, // 24 hours
     }));
 
-    // Return user data with token
+    const user = {
+      id: userData.id,
+      email: userData.email,
+      full_name: userData.full_name,
+      organisation_id: userData.organisation_id,
+      roles: [role],
+    };
+
     return new Response(
-      JSON.stringify({
-        token,
-        user: {
-          id: userData.id,
-          email: userData.email,
-          full_name: userData.full_name,
-          roles: [role],
-          organisation_id: userData.organisation_id
-        }
-      }),
+      JSON.stringify({ token, user }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error('Error in auth-register function:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

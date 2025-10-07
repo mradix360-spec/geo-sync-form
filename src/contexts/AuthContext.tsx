@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         body: { email, password }
       });
 
-      if (error || !data) {
+      if (error || !data?.token) {
         toast({
           variant: "destructive",
           title: "Login failed",
@@ -53,16 +53,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw new Error(data?.error || 'Invalid credentials');
       }
 
-      const { token, user } = data;
-
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('auth_user', JSON.stringify(user));
-      setToken(token);
-      setUser(user);
+      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('auth_user', JSON.stringify(data.user));
+      setToken(data.token);
+      setUser(data.user);
 
       toast({
         title: "Welcome back!",
-        description: `Logged in as ${user.email}`,
+        description: `Logged in as ${data.user.email}`,
       });
     } catch (error) {
       console.error('Login error:', error);
@@ -76,7 +74,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         body: { email, password, fullName, orgName }
       });
 
-      if (error || !data) {
+      if (error || !data?.token) {
         toast({
           variant: "destructive",
           title: "Registration failed",
@@ -85,12 +83,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw new Error(data?.error || 'Registration failed');
       }
 
-      const { token, user } = data;
-
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('auth_user', JSON.stringify(user));
-      setToken(token);
-      setUser(user);
+      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('auth_user', JSON.stringify(data.user));
+      setToken(data.token);
+      setUser(data.user);
 
       toast({
         title: "Account created!",

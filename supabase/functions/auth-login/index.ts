@@ -30,7 +30,7 @@ serve(async (req) => {
     // Fetch user by email
     const { data: userData, error: userError } = await supabaseClient
       .from('users')
-      .select('id, email, full_name, password_hash, organisation_id, is_active')
+      .select('id, email, password_hash, full_name, organisation_id, is_active')
       .eq('email', email)
       .single();
 
@@ -60,38 +60,40 @@ serve(async (req) => {
     }
 
     // Fetch user roles
-    const { data: rolesData } = await supabaseClient
+    const { data: rolesData, error: rolesError } = await supabaseClient
       .from('user_roles')
       .select('role')
       .eq('user_id', userData.id);
 
+    if (rolesError) {
+      console.error('Roles lookup error:', rolesError);
+    }
+
     const roles = rolesData?.map(r => r.role) || [];
 
-    // Generate JWT token
+    // Generate JWT token (simple implementation for MVP)
     const token = btoa(JSON.stringify({
       userId: userData.id,
       email: userData.email,
-      exp: Date.now() + 86400000 // 24 hours
+      exp: Date.now() + 86400000, // 24 hours
     }));
 
-    // Return user data with token
+    const user = {
+      id: userData.id,
+      email: userData.email,
+      full_name: userData.full_name,
+      organisation_id: userData.organisation_id,
+      roles,
+    };
+
     return new Response(
-      JSON.stringify({
-        token,
-        user: {
-          id: userData.id,
-          email: userData.email,
-          full_name: userData.full_name,
-          roles,
-          organisation_id: userData.organisation_id
-        }
-      }),
+      JSON.stringify({ token, user }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Error in auth-login function:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
