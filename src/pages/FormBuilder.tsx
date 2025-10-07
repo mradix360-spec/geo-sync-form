@@ -24,6 +24,11 @@ const FormBuilder = () => {
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
 
+  const handleBack = () => {
+    const isFieldStaff = user?.roles.includes('field_staff');
+    navigate(isFieldStaff ? '/field' : '/analyst');
+  };
+
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [geometryType, setGeometryType] = useState("Point");
@@ -92,7 +97,9 @@ const FormBuilder = () => {
         description: "Your form has been created successfully",
       });
 
-      navigate("/dashboard");
+      // Redirect based on user role
+      const isFieldStaff = user?.roles.includes('field_staff');
+      navigate(isFieldStaff ? '/field' : '/analyst');
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -108,7 +115,7 @@ const FormBuilder = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate("/dashboard")}>
+          <Button variant="ghost" onClick={handleBack}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>

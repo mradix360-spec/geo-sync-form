@@ -13,21 +13,21 @@ export const QuickActions = () => {
       </Button>
       <Button 
         variant="secondary" 
-        onClick={() => navigate("/dashboard/maps/new")} 
+        onClick={() => navigate("/analyst/maps")} 
         size="lg" 
         className="gap-2"
       >
         <MapIcon className="h-5 w-5" />
-        Create Map
+        View Maps
       </Button>
       <Button 
         variant="secondary" 
-        onClick={() => navigate("/dashboard/dashboards/new")} 
+        onClick={() => navigate("/analyst/dashboards")} 
         size="lg" 
         className="gap-2"
       >
         <BarChart3 className="h-5 w-5" />
-        Create Dashboard
+        View Dashboards
       </Button>
     </div>
   );

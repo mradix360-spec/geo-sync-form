@@ -13,7 +13,7 @@ const MapsView = () => {
           <h1 className="text-3xl font-bold">Maps</h1>
           <p className="text-muted-foreground">View and manage your map configurations</p>
         </div>
-        <Button onClick={() => navigate("/dashboard/maps/new")} className="gap-2">
+        <Button onClick={() => navigate("/analyst/maps")} className="gap-2">
           <Plus className="h-4 w-4" />
           Create Map
         </Button>
@@ -24,7 +24,7 @@ const MapsView = () => {
         title="No maps yet"
         description="Create your first map to visualize form data"
         actionLabel="Create Your First Map"
-        onAction={() => navigate("/dashboard/maps/new")}
+        onAction={() => navigate("/analyst/maps")}
       />
     </div>
   );

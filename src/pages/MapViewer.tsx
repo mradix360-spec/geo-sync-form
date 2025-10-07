@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Download } from "lucide-react";
@@ -9,6 +10,12 @@ import MapView from "@/components/MapView";
 const MapViewer = () => {
   const navigate = useNavigate();
   const { formId } = useParams<{ formId: string }>();
+  const { user } = useAuth();
+
+  const handleBack = () => {
+    const isFieldStaff = user?.roles.includes('field_staff');
+    navigate(isFieldStaff ? '/field' : '/analyst/maps');
+  };
 
   const [responses, setResponses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -16,7 +23,7 @@ const MapViewer = () => {
 
   useEffect(() => {
     if (!formId) {
-      navigate('/dashboard');
+      handleBack();
       return;
     }
     loadResponses();
@@ -92,7 +99,7 @@ const MapViewer = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate('/dashboard')}>
+          <Button variant="ghost" onClick={handleBack}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>

@@ -14,13 +14,13 @@ const FieldStaffLayout = () => {
 
   useEffect(() => {
     if (!user) {
-      navigate("/auth");
+      navigate("/auth/login");
       return;
     }
     // Redirect if not field staff
     const hasAccess = isFieldUser();
     if (!hasAccess) {
-      navigate("/dashboard/forms");
+      navigate("/analyst");
     }
   }, [user, navigate]);
 

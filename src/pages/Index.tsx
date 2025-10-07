@@ -11,7 +11,9 @@ const Index = () => {
   useEffect(() => {
     // Redirect if already logged in
     if (user) {
-      navigate("/dashboard", { replace: true });
+      const isFieldStaff = user.roles.includes('field_staff');
+      const redirectPath = isFieldStaff ? '/field' : '/analyst';
+      navigate(redirectPath, { replace: true });
     }
   }, [user, navigate]);
 

@@ -13,7 +13,7 @@ const DashboardsView = () => {
           <h1 className="text-3xl font-bold">Dashboards</h1>
           <p className="text-muted-foreground">Create and manage analytics dashboards</p>
         </div>
-        <Button onClick={() => navigate("/dashboard/dashboards/new")} className="gap-2">
+        <Button onClick={() => navigate("/analyst/dashboards")} className="gap-2">
           <Plus className="h-4 w-4" />
           Create Dashboard
         </Button>
@@ -24,7 +24,7 @@ const DashboardsView = () => {
         title="No dashboards yet"
         description="Create your first dashboard to analyze form responses"
         actionLabel="Create Your First Dashboard"
-        onAction={() => navigate("/dashboard/dashboards/new")}
+        onAction={() => navigate("/analyst/dashboards")}
       />
     </div>
   );

@@ -14,13 +14,13 @@ const AnalystLayout = () => {
 
   useEffect(() => {
     if (!user) {
-      navigate("/auth");
+      navigate("/auth/login");
       return;
     }
-    // Redirect if not analyst or admin (check roles without adding functions to deps)
+    // Redirect if not analyst or admin
     const hasAccess = isAnalyst() || isAdmin();
     if (!hasAccess) {
-      navigate("/dashboard");
+      navigate("/field");
     }
   }, [user, navigate]);
 

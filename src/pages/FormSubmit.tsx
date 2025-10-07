@@ -150,7 +150,7 @@ const FormSubmit = () => {
         });
       }
 
-      navigate('/dashboard');
+      handleBack();
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -174,7 +174,7 @@ const FormSubmit = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate('/dashboard')}>
+          <Button variant="ghost" onClick={handleBack}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
