@@ -38,9 +38,14 @@ const FormSubmit = () => {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState<string>('');
 
+  const handleBack = () => {
+    const isFieldStaff = user?.roles.includes('field_staff');
+    navigate(isFieldStaff ? '/field' : '/analyst');
+  };
+
   useEffect(() => {
     if (!formId) {
-      navigate('/dashboard');
+      handleBack();
       return;
     }
     loadForm();
