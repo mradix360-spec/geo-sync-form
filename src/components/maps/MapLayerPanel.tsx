@@ -169,7 +169,7 @@ export const MapLayerPanel = ({
             <SelectTrigger className="flex-1">
               <SelectValue placeholder="Select form..." />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[9999] bg-popover">
               {availableForms.map((form) => (
                 <SelectItem key={form.id} value={form.id}>
                   {form.title}
@@ -265,7 +265,7 @@ export const MapLayerPanel = ({
                     <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[9999] bg-popover">
                       {SYMBOL_TYPES.map((symbol) => (
                         <SelectItem key={symbol.id} value={symbol.id} className="text-xs">
                           <span className="flex items-center gap-2">
@@ -287,7 +287,7 @@ export const MapLayerPanel = ({
                     <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[9999] bg-popover">
                       {SYMBOL_SIZES.map((size) => (
                         <SelectItem key={size.id} value={size.id} className="text-xs">
                           {size.name}
@@ -303,7 +303,7 @@ export const MapLayerPanel = ({
       )}
 
       <Dialog open={styleDialogOpen} onOpenChange={setStyleDialogOpen}>
-        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto z-[10000]">
           <DialogHeader>
             <DialogTitle>Attribute-Based Styling</DialogTitle>
           </DialogHeader>

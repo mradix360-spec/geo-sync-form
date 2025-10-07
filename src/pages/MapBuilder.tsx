@@ -420,8 +420,8 @@ const MapBuilder = () => {
         </header>
 
         <div className="flex flex-1 w-full overflow-hidden">
-          <Sidebar collapsible="icon" className="border-r">
-            <SidebarContent>
+          <Sidebar collapsible="icon" className="border-r z-10">
+            <SidebarContent className="z-10">
               <ScrollArea className="flex-1">
                 <div className="p-4 space-y-6">
                   <div className="space-y-2">

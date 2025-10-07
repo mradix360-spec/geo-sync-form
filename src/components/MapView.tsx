@@ -225,8 +225,8 @@ const MapView = ({ responses = [], basemapUrl, basemapAttribution, enableCluster
   }, [responses, enableClustering]);
 
   return (
-    <div className="relative w-full h-full">
-      <div ref={containerRef} className="h-full w-full" />
+    <div className="relative w-full h-full z-0">
+      <div ref={containerRef} className="h-full w-full z-0" />
     </div>
   );
 };
