@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { TrendingUp, TrendingDown, ArrowUp, ArrowDown } from "lucide-react";
 import { WidgetConfig } from "../WidgetConfig";
 import { calculateStatistics, filterByDateRange, formatStatisticValue } from "@/lib/statistics";
+import { Sparkline } from "./Sparkline";
 
 interface StatCardWidgetProps {
   config: any;
@@ -15,6 +16,7 @@ export const StatCardWidget = ({ config, onUpdate }: StatCardWidgetProps) => {
   const [fields, setFields] = useState<any[]>([]);
   const [value, setValue] = useState(0);
   const [trend, setTrend] = useState(0);
+  const [sparklineData, setSparklineData] = useState<number[]>([]);
 
   useEffect(() => {
     loadForms();
@@ -104,6 +106,24 @@ export const StatCardWidget = ({ config, onUpdate }: StatCardWidgetProps) => {
     const previousCount = previous.length;
     
     setTrend(previousCount > 0 ? ((recentCount - previousCount) / previousCount) * 100 : 0);
+
+    // Generate sparkline data (last 14 days)
+    const sparkline: number[] = [];
+    for (let i = 13; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      const nextDate = new Date(date);
+      nextDate.setDate(nextDate.getDate() + 1);
+      
+      const dayCount = filteredData.filter(r => {
+        const responseDate = new Date(r.created_at);
+        return responseDate >= date && responseDate < nextDate;
+      }).length;
+      
+      sparkline.push(dayCount);
+    }
+    setSparklineData(sparkline);
   };
 
   return (
@@ -122,8 +142,8 @@ export const StatCardWidget = ({ config, onUpdate }: StatCardWidgetProps) => {
           showFilters={true}
         />
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col justify-center">
-        <div className="flex items-baseline gap-3 mb-3">
+      <CardContent className="flex-1 flex flex-col justify-between">
+        <div className="flex items-baseline gap-3 mb-2">
           <div className="text-4xl font-bold bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent animate-scale-in" style={{ 
             color: config.color,
             WebkitTextFillColor: config.color || undefined 
@@ -145,7 +165,8 @@ export const StatCardWidget = ({ config, onUpdate }: StatCardWidgetProps) => {
             </div>
           )}
         </div>
-        <div className="space-y-1">
+        
+        <div className="space-y-2 flex-1">
           <p className="text-xs text-muted-foreground">
             {config.field 
               ? `${config.statistic?.toUpperCase() || 'COUNT'} of ${config.field}`
@@ -154,6 +175,16 @@ export const StatCardWidget = ({ config, onUpdate }: StatCardWidgetProps) => {
           </p>
           <p className="text-xs text-muted-foreground/70">vs previous 30 days</p>
         </div>
+
+        {/* Sparkline */}
+        {sparklineData.length > 0 && (
+          <div className="mt-2 h-12 -mb-2">
+            <Sparkline 
+              data={sparklineData} 
+              color={config.color || (trend > 0 ? '#22c55e' : trend < 0 ? '#ef4444' : '#3b82f6')}
+            />
+          </div>
+        )}
       </CardContent>
     </div>
   );
