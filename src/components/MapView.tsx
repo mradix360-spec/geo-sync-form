@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 
-// Fix for default marker icons in React-Leaflet
+// Fix for default marker icons in Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
@@ -19,85 +18,102 @@ interface MapViewProps {
   responses?: any[];
 }
 
-// Component to fit bounds to all markers
-function FitBounds({ responses }: { responses: any[] }) {
-  const map = useMap();
+const MapView = ({ responses = [] }: MapViewProps) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markersLayerRef = useRef<L.LayerGroup | null>(null);
 
+  // Initialize map once
   useEffect(() => {
-    if (responses && responses.length > 0) {
-      const validCoords = responses
-        .filter(r => r?.geojson?.geometry?.coordinates)
-        .map(r => {
-          const coords = r.geojson.geometry.coordinates;
-          return [coords[1], coords[0]] as [number, number]; // Leaflet uses [lat, lng]
+    try {
+      if (containerRef.current && !mapRef.current) {
+        mapRef.current = L.map(containerRef.current, {
+          center: [0, 0],
+          zoom: 2,
+          zoomControl: true,
+          scrollWheelZoom: true,
         });
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors',
+        }).addTo(mapRef.current);
+
+        markersLayerRef.current = L.layerGroup().addTo(mapRef.current);
+      }
+    } catch (err) {
+      console.error('Error initializing Leaflet map:', err);
+    }
+
+    return () => {
+      try {
+        if (mapRef.current) {
+          mapRef.current.remove();
+          mapRef.current = null;
+          markersLayerRef.current = null;
+        }
+      } catch (cleanupErr) {
+        console.warn('Error cleaning up Leaflet map:', cleanupErr);
+      }
+    };
+  }, []);
+
+  // Update markers when responses change
+  useEffect(() => {
+    try {
+      const map = mapRef.current;
+      const layer = markersLayerRef.current;
+      if (!map || !layer) return;
+
+      // Clear existing markers
+      layer.clearLayers();
+
+      const validCoords: [number, number][] = [];
+
+      (responses || []).forEach((r, index) => {
+        const coords = r?.geojson?.geometry?.coordinates;
+        if (
+          Array.isArray(coords) &&
+          coords.length >= 2 &&
+          typeof coords[0] === 'number' &&
+          typeof coords[1] === 'number'
+        ) {
+          const latlng: [number, number] = [coords[1], coords[0]]; // [lat, lng]
+          validCoords.push(latlng);
+
+          const props = r?.geojson?.properties || {};
+          const popupHtml = `
+            <div class="text-sm">
+              <strong>Response #${index + 1}</strong>
+              ${
+                Object.keys(props).length
+                  ? `<div class="mt-2 space-y-1">${Object.entries(props)
+                      .map(([k, v]) => `<div><span class="font-medium">${k}:</span> ${String(v)}</div>`) 
+                      .join('')}</div>`
+                  : ''
+              }
+            </div>`;
+
+          L.marker(latlng, { icon: DefaultIcon }).addTo(layer).bindPopup(popupHtml);
+        }
+      });
 
       if (validCoords.length > 0) {
         const bounds = L.latLngBounds(validCoords);
         map.fitBounds(bounds, { padding: [50, 50] });
+      } else {
+        map.setView([0, 0], 2);
       }
+    } catch (err) {
+      console.error('Error updating Leaflet markers:', err);
     }
-  }, [responses, map]);
-
-  return null;
-}
-
-const MapView = ({ responses = [] }: MapViewProps) => {
-  const defaultCenter: [number, number] = [0, 0];
-  const defaultZoom = 2;
-  const [mapKey] = useState(() => `map-${Date.now()}`);
-
-  // Safely filter valid responses
-  const validResponses = responses?.filter(r => r?.geojson?.geometry?.coordinates) || [];
+  }, [responses]);
 
   return (
     <div className="relative w-full h-[600px] rounded-lg overflow-hidden border border-border">
-      <MapContainer
-        key={mapKey}
-        center={defaultCenter}
-        zoom={defaultZoom}
-        className="h-full w-full"
-        zoomControl={true}
-        scrollWheelZoom={true}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        
-        <FitBounds responses={validResponses} />
-
-        {validResponses.map((response, index) => {
-          try {
-            const coords = response.geojson.geometry.coordinates;
-            const position: [number, number] = [coords[1], coords[0]]; // Leaflet uses [lat, lng]
-
-            return (
-              <Marker key={`marker-${index}-${coords[0]}-${coords[1]}`} position={position}>
-                <Popup>
-                  <div className="text-sm">
-                    <strong>Response #{index + 1}</strong>
-                    {response.geojson?.properties && (
-                      <div className="mt-2 space-y-1">
-                        {Object.entries(response.geojson.properties).map(([key, value]) => (
-                          <div key={key}>
-                            <span className="font-medium">{key}:</span> {String(value)}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </Popup>
-              </Marker>
-            );
-          } catch (error) {
-            console.error('Error rendering marker:', error);
-            return null;
-          }
-        })}
-      </MapContainer>
+      <div ref={containerRef} className="h-full w-full" />
     </div>
   );
 };
 
 export default MapView;
+
