@@ -18,10 +18,12 @@ const Login = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      const from = (location.state as any)?.from?.pathname || "/dashboard";
-      navigate(from, { replace: true });
+      // Redirect based on role
+      const isFieldStaff = user.roles.includes('field_staff');
+      const redirectPath = isFieldStaff ? '/field' : '/analyst';
+      navigate(redirectPath, { replace: true });
     }
-  }, [user, navigate, location]);
+  }, [user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,8 +31,7 @@ const Login = () => {
 
     try {
       await login(email, password);
-      const from = (location.state as any)?.from?.pathname || "/dashboard";
-      navigate(from, { replace: true });
+      // Note: redirect happens in useEffect after user state updates
     } catch (error) {
       console.error("Login failed:", error);
     } finally {

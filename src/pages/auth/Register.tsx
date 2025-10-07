@@ -19,7 +19,10 @@ const Register = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      navigate("/dashboard", { replace: true });
+      // Redirect based on role
+      const isFieldStaff = user.roles.includes('field_staff');
+      const redirectPath = isFieldStaff ? '/field' : '/analyst';
+      navigate(redirectPath, { replace: true });
     }
   }, [user, navigate]);
 
@@ -29,7 +32,7 @@ const Register = () => {
 
     try {
       await register(email, password, fullName, orgName || undefined);
-      navigate("/dashboard", { replace: true });
+      // Note: redirect happens in useEffect after user state updates
     } catch (error) {
       console.error("Registration failed:", error);
     } finally {
