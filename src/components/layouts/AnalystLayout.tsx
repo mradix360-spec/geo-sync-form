@@ -26,7 +26,7 @@ const AnalystLayout = () => {
 
   const handleLogout = async () => {
     await logout();
-    navigate("/auth");
+    navigate("/auth/login");
   };
 
   const navItems = [

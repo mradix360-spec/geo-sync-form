@@ -273,136 +273,109 @@ export default function OrgLandingPage() {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {/* Public Forms */}
               {publicForms.map((form, idx) => (
-                <Link 
+                <Card 
                   key={form.id}
-                  to={`/public/forms/${form.id}`}
-                  className="group"
+                  className="p-6 h-full hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 relative overflow-hidden"
+                  style={{ 
+                    animationDelay: `${idx * 50}ms`,
+                    animation: 'fade-in 0.5s ease-out forwards'
+                  }}
                 >
-                  <Card 
-                    className="p-6 h-full hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 hover:border-primary/50 relative overflow-hidden"
+                  <div 
+                    className="absolute inset-0 opacity-5"
                     style={{ 
-                      animationDelay: `${idx * 50}ms`,
-                      animation: 'fade-in 0.5s ease-out forwards'
+                      background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`
                     }}
-                  >
+                  />
+                  <div className="relative z-10">
                     <div 
-                      className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300"
-                      style={{ 
-                        background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`
-                      }}
-                    />
-                    <div className="relative z-10">
-                      <div 
-                        className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300"
-                        style={{ backgroundColor: `${primaryColor}20` }}
-                      >
-                        <FileText className="h-6 w-6" style={{ color: primaryColor }} />
-                      </div>
-                      <h4 className="font-bold text-xl mb-2 group-hover:text-primary transition-colors">
-                        {form.title}
-                      </h4>
-                      {form.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
-                          {form.description}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-2 text-sm font-medium" style={{ color: primaryColor }}>
-                        <span>Open Form</span>
-                        <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                      </div>
+                      className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
+                      style={{ backgroundColor: `${primaryColor}20` }}
+                    >
+                      <FileText className="h-6 w-6" style={{ color: primaryColor }} />
                     </div>
-                  </Card>
-                </Link>
+                    <h4 className="font-bold text-xl mb-2">
+                      {form.title}
+                    </h4>
+                    {form.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-3">
+                        {form.description}
+                      </p>
+                    )}
+                  </div>
+                </Card>
               ))}
 
               {/* Public Maps */}
               {publicMaps.map((map, idx) => (
-                <Link 
+                <Card 
                   key={map.id}
-                  to={`/public/maps/${map.id}`}
-                  className="group"
+                  className="p-6 h-full hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 relative overflow-hidden"
+                  style={{ 
+                    animationDelay: `${(idx + publicForms.length) * 50}ms`,
+                    animation: 'fade-in 0.5s ease-out forwards'
+                  }}
                 >
-                  <Card 
-                    className="p-6 h-full hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 hover:border-primary/50 relative overflow-hidden"
+                  <div 
+                    className="absolute inset-0 opacity-5"
                     style={{ 
-                      animationDelay: `${(idx + publicForms.length) * 50}ms`,
-                      animation: 'fade-in 0.5s ease-out forwards'
+                      background: `linear-gradient(135deg, ${secondaryColor}, ${primaryColor})`
                     }}
-                  >
+                  />
+                  <div className="relative z-10">
                     <div 
-                      className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300"
-                      style={{ 
-                        background: `linear-gradient(135deg, ${secondaryColor}, ${primaryColor})`
-                      }}
-                    />
-                    <div className="relative z-10">
-                      <div 
-                        className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300"
-                        style={{ backgroundColor: `${secondaryColor}20` }}
-                      >
-                        <Map className="h-6 w-6" style={{ color: secondaryColor }} />
-                      </div>
-                      <h4 className="font-bold text-xl mb-2 group-hover:text-primary transition-colors">
-                        {map.title}
-                      </h4>
-                      {map.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
-                          {map.description}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-2 text-sm font-medium" style={{ color: secondaryColor }}>
-                        <span>View Map</span>
-                        <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                      </div>
+                      className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
+                      style={{ backgroundColor: `${secondaryColor}20` }}
+                    >
+                      <Map className="h-6 w-6" style={{ color: secondaryColor }} />
                     </div>
-                  </Card>
-                </Link>
+                    <h4 className="font-bold text-xl mb-2">
+                      {map.title}
+                    </h4>
+                    {map.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-3">
+                        {map.description}
+                      </p>
+                    )}
+                  </div>
+                </Card>
               ))}
 
               {/* Public Dashboards */}
               {publicDashboards.map((dashboard, idx) => (
-                <Link 
+                <Card 
                   key={dashboard.id}
-                  to={`/public/dashboards/${dashboard.id}`}
-                  className="group"
+                  className="p-6 h-full hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 relative overflow-hidden"
+                  style={{ 
+                    animationDelay: `${(idx + publicForms.length + publicMaps.length) * 50}ms`,
+                    animation: 'fade-in 0.5s ease-out forwards'
+                  }}
                 >
-                  <Card 
-                    className="p-6 h-full hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 hover:border-primary/50 relative overflow-hidden"
+                  <div 
+                    className="absolute inset-0 opacity-5"
                     style={{ 
-                      animationDelay: `${(idx + publicForms.length + publicMaps.length) * 50}ms`,
-                      animation: 'fade-in 0.5s ease-out forwards'
+                      background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`
                     }}
-                  >
+                  />
+                  <div className="relative z-10">
                     <div 
-                      className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300"
+                      className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
                       style={{ 
-                        background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`
+                        background: `linear-gradient(135deg, ${primaryColor}20, ${secondaryColor}20)`
                       }}
-                    />
-                    <div className="relative z-10">
-                      <div 
-                        className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300"
-                        style={{ 
-                          background: `linear-gradient(135deg, ${primaryColor}20, ${secondaryColor}20)`
-                        }}
-                      >
-                        <BarChart3 className="h-6 w-6" style={{ color: primaryColor }} />
-                      </div>
-                      <h4 className="font-bold text-xl mb-2 group-hover:text-primary transition-colors">
-                        {dashboard.title}
-                      </h4>
-                      {dashboard.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
-                          {dashboard.description}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-2 text-sm font-medium" style={{ color: primaryColor }}>
-                        <span>Open Dashboard</span>
-                        <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                      </div>
+                    >
+                      <BarChart3 className="h-6 w-6" style={{ color: primaryColor }} />
                     </div>
-                  </Card>
-                </Link>
+                    <h4 className="font-bold text-xl mb-2">
+                      {dashboard.title}
+                    </h4>
+                    {dashboard.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-3">
+                        {dashboard.description}
+                      </p>
+                    )}
+                  </div>
+                </Card>
               ))}
             </div>
           </div>
