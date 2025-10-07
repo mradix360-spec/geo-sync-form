@@ -16,7 +16,7 @@ serve(async (req) => {
 
     if (!email || !password || !fullName) {
       return new Response(
-        JSON.stringify({ error: 'Email, password, and full name are required' }),
+        JSON.stringify({ success: false, error: 'Email, password, and full name are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -35,7 +35,7 @@ serve(async (req) => {
 
     if (existingUser) {
       return new Response(
-        JSON.stringify({ error: 'Email already registered' }),
+        JSON.stringify({ success: false, error: 'Email already registered' }),
         { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -69,10 +69,30 @@ serve(async (req) => {
       throw new Error('Failed to hash password');
     }
 
-    // Create user
+    // Create Supabase Auth user first
+    const { data: authData, error: signUpError } = await supabaseClient.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: fullName,
+        organisation_id: orgId
+      }
+    });
+
+    if (signUpError || !authData.user) {
+      console.error('Auth user creation error:', signUpError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Failed to create auth user' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create user in custom users table with the same ID
     const { data: userData, error: userError } = await supabaseClient
       .from('users')
       .insert({
+        id: authData.user.id, // Use the auth user ID
         email,
         password_hash: passwordHash,
         full_name: fullName,
@@ -84,8 +104,10 @@ serve(async (req) => {
 
     if (userError) {
       console.error('User creation error:', userError);
+      // Clean up auth user if custom user creation fails
+      await supabaseClient.auth.admin.deleteUser(authData.user.id);
       return new Response(
-        JSON.stringify({ error: 'Failed to create user' }),
+        JSON.stringify({ success: false, error: 'Failed to create user' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -103,29 +125,22 @@ serve(async (req) => {
       console.error('Role assignment error:', roleError);
     }
 
-    // Generate JWT token
-    const token = btoa(JSON.stringify({
-      userId: userData.id,
-      email: userData.email,
-      exp: Date.now() + 86400000, // 24 hours
-    }));
-
-    const user = {
-      id: userData.id,
-      email: userData.email,
-      full_name: userData.full_name,
-      organisation_id: userData.organisation_id,
-      roles: [role],
-    };
-
     return new Response(
-      JSON.stringify({ token, user }),
+      JSON.stringify({ 
+        success: true,
+        user: {
+          id: userData.id,
+          email: userData.email,
+          full_name: userData.full_name,
+          organisation_id: userData.organisation_id
+        }
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('Error in auth-register function:', error);
     return new Response(
-      JSON.stringify({ error: String(error) }),
+      JSON.stringify({ success: false, error: String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

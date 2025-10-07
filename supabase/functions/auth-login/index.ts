@@ -16,7 +16,7 @@ serve(async (req) => {
 
     if (!email || !password) {
       return new Response(
-        JSON.stringify({ error: 'Email and password are required' }),
+        JSON.stringify({ success: false, error: 'Email and password are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -36,14 +36,14 @@ serve(async (req) => {
     if (userError || !userData) {
       console.error('User lookup error:', userError);
       return new Response(
-        JSON.stringify({ error: 'Invalid email or password' }),
+        JSON.stringify({ success: false, error: 'Invalid email or password' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     if (!userData.is_active) {
       return new Response(
-        JSON.stringify({ error: 'Account is inactive' }),
+        JSON.stringify({ success: false, error: 'Account is inactive' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -57,46 +57,40 @@ serve(async (req) => {
 
     if (verifyError || !verifyResult) {
       return new Response(
-        JSON.stringify({ error: 'Invalid email or password' }),
+        JSON.stringify({ success: false, error: 'Invalid email or password' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Fetch user roles
-    const { data: rolesData, error: rolesError } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userData.id);
+    // Sign in with Supabase Auth
+    const { data: authData, error: signInError } = await supabaseClient.auth.signInWithPassword({
+      email,
+      password
+    });
 
-    if (rolesError) {
-      console.error('Roles lookup error:', rolesError);
+    if (signInError || !authData.session) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Failed to create auth session' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const roles = rolesData?.map(r => r.role) || [];
-
-    // Generate JWT token (simple implementation for MVP)
-    const token = btoa(JSON.stringify({
-      userId: userData.id,
-      email: userData.email,
-      exp: Date.now() + 86400000, // 24 hours
-    }));
-
-    const user = {
-      id: userData.id,
-      email: userData.email,
-      full_name: userData.full_name,
-      organisation_id: userData.organisation_id,
-      roles,
-    };
-
     return new Response(
-      JSON.stringify({ token, user }),
+      JSON.stringify({ 
+        success: true,
+        user: {
+          id: userData.id,
+          email: userData.email,
+          full_name: userData.full_name,
+          organisation_id: userData.organisation_id
+        }
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('Error in auth-login function:', error);
     return new Response(
-      JSON.stringify({ error: String(error) }),
+      JSON.stringify({ success: false, error: String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

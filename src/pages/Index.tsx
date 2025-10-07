@@ -1,9 +1,19 @@
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Map, FormInput, Database, Share2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect } from "react";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    // Redirect if already logged in
+    if (user) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/30 to-primary/20">
@@ -22,10 +32,18 @@ const Index = () => {
           </p>
 
           <div className="flex gap-4 justify-center mb-16">
-            <Button size="lg" onClick={() => navigate("/auth")} className="shadow-[var(--shadow-glow)]">
+            <Button 
+              size="lg" 
+              onClick={() => navigate("/auth/register")}
+              className="shadow-[var(--shadow-glow)]"
+            >
               Get Started
             </Button>
-            <Button size="lg" variant="outline" onClick={() => navigate("/auth")}>
+            <Button 
+              size="lg" 
+              variant="outline" 
+              onClick={() => navigate("/auth/login")}
+            >
               Sign In
             </Button>
           </div>
