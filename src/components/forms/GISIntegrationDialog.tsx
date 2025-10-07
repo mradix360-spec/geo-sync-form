@@ -26,7 +26,8 @@ export const GISIntegrationDialog = ({
   onTokenRegenerated,
 }: GISIntegrationDialogProps) => {
   const [isRegenerating, setIsRegenerating] = useState(false);
-  const baseUrl = 'https://shqclgwsgmlnimcggxch.supabase.co/functions/v1';
+  const projectRef = 'shqclgwsgmlnimcggxch';
+  const baseUrl = `https://${projectRef}.supabase.co/functions/v1`;
   
   const geojsonUrl = shareToken 
     ? `${baseUrl}/public-geojson-feed?token=${shareToken}&formId=${formId}`
