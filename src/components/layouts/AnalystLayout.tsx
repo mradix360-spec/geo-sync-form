@@ -17,11 +17,12 @@ const AnalystLayout = () => {
       navigate("/auth");
       return;
     }
-    // Redirect if not analyst or admin
-    if (!isAnalyst() && !isAdmin()) {
+    // Redirect if not analyst or admin (check roles without adding functions to deps)
+    const hasAccess = isAnalyst() || isAdmin();
+    if (!hasAccess) {
       navigate("/dashboard");
     }
-  }, [user, isAnalyst, isAdmin, navigate]);
+  }, [user, navigate]);
 
   const handleLogout = async () => {
     await logout();
