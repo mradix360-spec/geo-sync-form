@@ -44,6 +44,43 @@ const MapView = ({ responses = [], basemapUrl, basemapAttribution }: MapViewProp
           attribution: defaultAttribution,
         }).addTo(mapRef.current);
 
+        // Add scale control
+        L.control.scale({
+          position: 'bottomleft',
+          metric: true,
+          imperial: false
+        }).addTo(mapRef.current);
+
+        // Add custom reset view control
+        const ResetControl = L.Control.extend({
+          options: { position: 'topleft' },
+          onAdd: function() {
+            const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+            const button = L.DomUtil.create('a', '', container);
+            button.innerHTML = '⌂';
+            button.href = '#';
+            button.title = 'Reset view to Africa';
+            button.style.fontSize = '20px';
+            button.style.lineHeight = '26px';
+            button.style.width = '26px';
+            button.style.height = '26px';
+            button.style.display = 'flex';
+            button.style.alignItems = 'center';
+            button.style.justifyContent = 'center';
+            
+            L.DomEvent.on(button, 'click', function(e) {
+              L.DomEvent.preventDefault(e);
+              if (mapRef.current) {
+                mapRef.current.setView([0, 20], 3);
+              }
+            });
+            
+            return container;
+          }
+        });
+
+        new ResetControl().addTo(mapRef.current);
+
         markersLayerRef.current = L.layerGroup().addTo(mapRef.current);
       }
     } catch (err) {
