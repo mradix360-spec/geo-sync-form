@@ -61,7 +61,6 @@ export const GISIntegrationDialog = ({
   const handleRegenerateToken = async () => {
     setIsRegenerating(true);
     try {
-      // Delete old token and create new one
       if (shareToken) {
         await supabase.from('shares').delete().eq('token', shareToken);
       }
@@ -121,7 +120,7 @@ export const GISIntegrationDialog = ({
             </TabsTrigger>
             <TabsTrigger value="arcgis">
               <Layers className="w-4 h-4 mr-2" />
-              ArcGIS REST
+              ArcGIS
             </TabsTrigger>
           </TabsList>
 
@@ -168,6 +167,9 @@ export const GISIntegrationDialog = ({
                 <li>Paste the URL above</li>
                 <li>Click <strong>OK</strong></li>
               </ol>
+              <p className="text-xs text-green-600 dark:text-green-400 mt-2">
+                ✓ This is the recommended method for ArcGIS Pro
+              </p>
             </div>
           </TabsContent>
 
@@ -210,7 +212,7 @@ export const GISIntegrationDialog = ({
 
           <TabsContent value="arcgis" className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="arcgis-url">ArcGIS Feature Service URL</Label>
+              <Label htmlFor="arcgis-url">ArcGIS REST API URL</Label>
               <div className="flex gap-2">
                 <Input
                   id="arcgis-url"
@@ -228,17 +230,62 @@ export const GISIntegrationDialog = ({
               </div>
             </div>
 
+            <div className="rounded-lg bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 p-4 space-y-2">
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                ⚠️ ArcGIS Pro Limitation
+              </p>
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                ArcGIS Pro's "Add Data from Path" does not support external REST Feature Services. Use one of the alternative methods below.
+              </p>
+            </div>
+
             <div className="rounded-lg bg-muted p-4 space-y-3">
-              <h4 className="font-semibold">How to add in ArcGIS Pro:</h4>
+              <h4 className="font-semibold">Method 1: Use GeoJSON Feed (Recommended)</h4>
               <ol className="list-decimal list-inside space-y-2 text-sm">
-                <li>Open ArcGIS Pro</li>
-                <li>In the <strong>Catalog</strong> pane, right-click <strong>Servers</strong></li>
-                <li>Select <strong>New ArcGIS Server</strong></li>
-                <li>Enter the service URL: <code className="bg-background px-1">{baseUrl}/arcgis-feature-service/{formId}</code></li>
-                <li>Add <code>?token={shareToken || 'YOUR_TOKEN'}</code> to queries</li>
+                <li>Switch to the <strong>GeoJSON Feed</strong> tab above</li>
+                <li>Copy the GeoJSON URL</li>
+                <li>In ArcGIS Pro, go to <strong>Map → Add Data → Data from Path</strong></li>
+                <li>Paste the GeoJSON URL and click <strong>OK</strong></li>
+              </ol>
+              <p className="text-xs text-green-600 dark:text-green-400 mt-2">
+                ✓ This method works reliably in ArcGIS Pro
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-muted p-4 space-y-3">
+              <h4 className="font-semibold">Method 2: Download and Import</h4>
+              <ol className="list-decimal list-inside space-y-2 text-sm">
+                <li>Open the GeoJSON URL in your web browser</li>
+                <li>Save the file as <code className="bg-background px-1">{formTitle.replace(/[^a-z0-9]/gi, '_')}.geojson</code></li>
+                <li>In ArcGIS Pro, drag and drop the file into your map</li>
+                <li>Or use <strong>Map → Add Data</strong> and browse to the file</li>
+              </ol>
+            </div>
+
+            <div className="rounded-lg bg-muted p-4 space-y-3">
+              <h4 className="font-semibold">Method 3: Python Script (Advanced)</h4>
+              <p className="text-sm">Open the Python window in ArcGIS Pro and run:</p>
+              <div className="bg-background p-3 rounded font-mono text-xs overflow-x-auto">
+                <code>
+                  import arcpy<br/>
+                  arcpy.conversion.JSONToFeatures(<br/>
+                  &nbsp;&nbsp;&nbsp;&nbsp;"{geojsonUrl}",<br/>
+                  &nbsp;&nbsp;&nbsp;&nbsp;"FormData"<br/>
+                  )
+                </code>
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-muted p-4 space-y-3">
+              <h4 className="font-semibold">For ArcGIS Online:</h4>
+              <ol className="list-decimal list-inside space-y-2 text-sm">
+                <li>Click <strong>Add → Add Layer from Web</strong></li>
+                <li>Choose <strong>A GeoJSON File</strong></li>
+                <li>Paste the GeoJSON URL from the first tab</li>
+                <li>Click <strong>Add Layer</strong></li>
               </ol>
               <p className="text-xs text-muted-foreground mt-2">
-                ⚡ Optimized for ArcGIS Online and ArcGIS Server
+                ℹ️ ArcGIS Online supports direct GeoJSON URLs
               </p>
             </div>
           </TabsContent>
