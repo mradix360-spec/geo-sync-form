@@ -24,43 +24,21 @@ export const FieldStats = () => {
     if (!user?.id) return;
 
     try {
-      // Get total submissions
-      const { count: totalCount } = await supabase
-        .from("form_responses")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id);
+      // Call optimized database function for parallel aggregation
+      const { data, error } = await supabase
+        .rpc('get_user_field_stats', { p_user_id: user.id });
 
-      // Get today's submissions
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const { count: todayCount } = await supabase
-        .from("form_responses")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .gte("created_at", today.toISOString());
+      if (error) throw error;
 
-      // Get this week's submissions
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      weekAgo.setHours(0, 0, 0, 0);
-      const { count: weekCount } = await supabase
-        .from("form_responses")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .gte("created_at", weekAgo.toISOString());
-
-      // Get assigned forms count
-      const { count: formsCount } = await supabase
-        .from("forms")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "published");
-
-      setStats({
-        totalSubmissions: totalCount || 0,
-        todaySubmissions: todayCount || 0,
-        weekSubmissions: weekCount || 0,
-        assignedForms: formsCount || 0,
-      });
+      if (data && data.length > 0) {
+        const result = data[0];
+        setStats({
+          totalSubmissions: Number(result.total_submissions) || 0,
+          todaySubmissions: Number(result.today_submissions) || 0,
+          weekSubmissions: Number(result.week_submissions) || 0,
+          assignedForms: Number(result.assigned_forms) || 0,
+        });
+      }
     } catch (error) {
       console.error("Error loading stats:", error);
     } finally {

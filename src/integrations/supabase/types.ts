@@ -1183,6 +1183,15 @@ export type Database = {
         Args: { "": number }
         Returns: string
       }
+      get_user_field_stats: {
+        Args: { p_user_id: string }
+        Returns: {
+          assigned_forms: number
+          today_submissions: number
+          total_submissions: number
+          week_submissions: number
+        }[]
+      }
       get_user_organisation_id: {
         Args: { _user_id: string }
         Returns: string
