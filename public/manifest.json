@@ -7,6 +7,8 @@
   "background_color": "#0f172a",
   "theme_color": "#3b82f6",
   "orientation": "portrait",
+  "categories": ["productivity", "utilities"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/placeholder.svg",
@@ -19,6 +21,16 @@
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "New Submission",
+      "short_name": "Submit",
+      "description": "Submit a new form",
+      "url": "/field",
+      "icons": [{ "src": "/placeholder.svg", "sizes": "192x192" }]
     }
   ]
 }

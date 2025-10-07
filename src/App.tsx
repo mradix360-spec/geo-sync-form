@@ -12,10 +12,14 @@ import FormSubmit from "./pages/FormSubmit";
 import MapViewer from "./pages/MapViewer";
 import NotFound from "./pages/NotFound";
 import AnalystLayout from "./components/layouts/AnalystLayout";
+import FieldStaffLayout from "./components/layouts/FieldStaffLayout";
 import FormsView from "./pages/analyst/FormsView";
 import MapsView from "./pages/analyst/MapsView";
 import DashboardsView from "./pages/analyst/DashboardsView";
 import SettingsView from "./pages/analyst/SettingsView";
+import FieldForms from "./pages/field/FieldForms";
+import FieldMap from "./pages/field/FieldMap";
+import FieldProfile from "./pages/field/FieldProfile";
 
 const queryClient = new QueryClient();
 
@@ -32,12 +36,21 @@ const App = () => (
               
               {/* Analyst/Admin Routes */}
               <Route element={<AnalystLayout />}>
-                <Route path="/dashboard" element={<Navigate to="/dashboard/forms" replace />} />
                 <Route path="/dashboard/forms" element={<FormsView />} />
                 <Route path="/dashboard/maps" element={<MapsView />} />
                 <Route path="/dashboard/dashboards" element={<DashboardsView />} />
                 <Route path="/dashboard/settings" element={<SettingsView />} />
               </Route>
+
+              {/* Field Staff Routes */}
+              <Route element={<FieldStaffLayout />}>
+                <Route path="/field" element={<FieldForms />} />
+                <Route path="/field/map" element={<FieldMap />} />
+                <Route path="/field/profile" element={<FieldProfile />} />
+              </Route>
+              
+              {/* Dashboard Router - redirects based on role */}
+              <Route path="/dashboard" element={<Dashboard />} />
               
               {/* Other routes */}
               <Route path="/form-builder" element={<FormBuilder />} />

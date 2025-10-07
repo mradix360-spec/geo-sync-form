@@ -42,7 +42,7 @@ serve(async (req) => {
 
     let orgId: string | null = null;
 
-    // Create organization if provided
+    // Create organization if provided, or use default
     if (orgName) {
       const { data: orgData, error: orgError } = await supabaseClient
         .from('organisations')
@@ -55,6 +55,9 @@ serve(async (req) => {
         throw new Error('Failed to create organization');
       }
       orgId = orgData.id;
+    } else {
+      // Assign to default organization if none provided
+      orgId = '00000000-0000-0000-0000-000000000001';
     }
 
     // Hash password using database function
