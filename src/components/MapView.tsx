@@ -1,24 +1,35 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
+import 'leaflet.markercluster';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { createCustomIcon, SymbolType, SymbolSize } from '@/lib/mapSymbols';
+
+interface StyleRule {
+  field: string;
+  values: { value: string; color: string }[];
+}
 
 interface ResponseWithSymbol {
   geojson: any;
   symbolType?: SymbolType;
   symbolSize?: SymbolSize;
   color?: string;
+  styleRule?: StyleRule;
+  layerTitle?: string;
 }
 
 interface MapViewProps {
   responses?: ResponseWithSymbol[];
   basemapUrl?: string;
   basemapAttribution?: string;
+  enableClustering?: boolean;
 }
 
-const MapView = ({ responses = [], basemapUrl, basemapAttribution }: MapViewProps) => {
+const MapView = ({ responses = [], basemapUrl, basemapAttribution, enableClustering = true }: MapViewProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const markersLayerRef = useRef<L.LayerGroup | null>(null);
+  const markersLayerRef = useRef<L.MarkerClusterGroup | L.LayerGroup | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
 
   // Initialize map once
@@ -76,7 +87,17 @@ const MapView = ({ responses = [], basemapUrl, basemapAttribution }: MapViewProp
 
         new ResetControl().addTo(mapRef.current);
 
-        markersLayerRef.current = L.layerGroup().addTo(mapRef.current);
+        // Initialize marker layer (clustered or regular)
+        if (enableClustering) {
+          markersLayerRef.current = (L as any).markerClusterGroup({
+            maxClusterRadius: 50,
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: true,
+            zoomToBoundsOnClick: true,
+          }).addTo(mapRef.current);
+        } else {
+          markersLayerRef.current = L.layerGroup().addTo(mapRef.current);
+        }
       }
     } catch (err) {
       console.error('Error initializing Leaflet map:', err);
@@ -142,25 +163,53 @@ const MapView = ({ responses = [], basemapUrl, basemapAttribution }: MapViewProp
           validCoords.push(latlng);
 
           const props = r?.geojson?.properties || {};
+          
+          // Create rich popup with all fields formatted
           const popupHtml = `
-            <div class="text-sm">
-              <strong>Response #${index + 1}</strong>
+            <div class="min-w-[200px] max-w-[300px]">
+              ${r.layerTitle ? `<div class="font-bold text-base mb-2 pb-2 border-b">${r.layerTitle}</div>` : ''}
               ${
                 Object.keys(props).length
-                  ? `<div class="mt-2 space-y-1">${Object.entries(props)
-                      .map(([k, v]) => `<div><span class="font-medium">${k}:</span> ${String(v)}</div>`) 
+                  ? `<div class="space-y-2">${Object.entries(props)
+                      .filter(([k]) => k !== 'id')
+                      .map(([k, v]) => {
+                        const displayValue = Array.isArray(v) 
+                          ? v.join(', ') 
+                          : typeof v === 'object' 
+                            ? JSON.stringify(v) 
+                            : String(v);
+                        return `
+                          <div class="text-sm">
+                            <div class="font-semibold text-xs uppercase text-muted-foreground mb-0.5">${k}</div>
+                            <div class="text-foreground">${displayValue}</div>
+                          </div>
+                        `;
+                      })
                       .join('')}</div>`
-                  : ''
+                  : '<div class="text-sm text-muted-foreground">No data available</div>'
               }
             </div>`;
 
+          // Determine marker color based on style rules or default
+          let markerColor = r.color || '#3b82f6';
+          if (r.styleRule && props[r.styleRule.field]) {
+            const fieldValue = String(props[r.styleRule.field]);
+            const matchingRule = r.styleRule.values.find(v => v.value === fieldValue);
+            if (matchingRule) {
+              markerColor = matchingRule.color;
+            }
+          }
+
           const icon = createCustomIcon(
             r.symbolType || 'circle',
-            r.color || '#3b82f6',
+            markerColor,
             r.symbolSize || 'medium'
           );
 
-          L.marker(latlng, { icon }).addTo(layer).bindPopup(popupHtml);
+          L.marker(latlng, { icon }).addTo(layer).bindPopup(popupHtml, {
+            maxWidth: 300,
+            className: 'custom-popup'
+          });
         }
       });
 
@@ -173,7 +222,7 @@ const MapView = ({ responses = [], basemapUrl, basemapAttribution }: MapViewProp
     } catch (err) {
       console.error('Error updating Leaflet markers:', err);
     }
-  }, [responses]);
+  }, [responses, enableClustering]);
 
   return (
     <div className="relative w-full h-full">

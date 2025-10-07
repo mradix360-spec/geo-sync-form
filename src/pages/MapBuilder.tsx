@@ -21,6 +21,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SymbolType, SymbolSize } from "@/lib/mapSymbols";
 
+interface StyleRule {
+  field: string;
+  values: { value: string; color: string }[];
+}
+
 interface MapLayer {
   id: string;
   formId: string;
@@ -29,6 +34,7 @@ interface MapLayer {
   color: string;
   symbolType?: SymbolType;
   symbolSize?: SymbolSize;
+  styleRule?: StyleRule;
   responses?: any[];
 }
 
@@ -82,6 +88,7 @@ const MapBuilder = () => {
   const [selectedBasemap, setSelectedBasemap] = useState(BASEMAPS[0]);
   const [layers, setLayers] = useState<MapLayer[]>([]);
   const [shareType, setShareType] = useState("private");
+  const [enableClustering, setEnableClustering] = useState(true);
 
   useEffect(() => {
     if (mapId) {
@@ -133,6 +140,7 @@ const MapBuilder = () => {
               color: layer.color || "#3b82f6",
               symbolType: layer.symbolType || 'circle',
               symbolSize: layer.symbolSize || 'medium',
+              styleRule: layer.styleRule,
               responses: responses || [],
             };
           })
@@ -176,8 +184,9 @@ const MapBuilder = () => {
     try {
       setSaving(true);
 
-      const mapConfig = {
+      const mapConfig: any = {
         basemap: selectedBasemap.id,
+        enableClustering,
         layers: layers.map(l => ({
           id: l.id,
           formId: l.formId,
@@ -185,6 +194,7 @@ const MapBuilder = () => {
           color: l.color,
           symbolType: l.symbolType || 'circle',
           symbolSize: l.symbolSize || 'medium',
+          styleRule: l.styleRule || null,
         })),
         viewport: {
           center: [0, 20],
@@ -243,13 +253,13 @@ const MapBuilder = () => {
         // Create new map
         const { data: newMap, error: mapError } = await supabase
           .from("maps")
-          .insert({
+          .insert([{
             title,
             description,
             config: mapConfig,
             organisation_id: user?.organisation_id,
             created_by: user?.id,
-          })
+          }])
           .select()
           .single();
 
@@ -309,6 +319,7 @@ const MapBuilder = () => {
         color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
         symbolType: 'circle',
         symbolSize: 'medium',
+        styleRule: undefined,
         responses: responses || [],
       };
 
@@ -354,6 +365,12 @@ const MapBuilder = () => {
     ));
   };
 
+  const handleChangeStyleRule = (layerId: string, styleRule: StyleRule | undefined) => {
+    setLayers(layers.map(l =>
+      l.id === layerId ? { ...l, styleRule } : l
+    ));
+  };
+
   const visibleResponses = layers
     .filter(l => l.visible)
     .flatMap(l => (l.responses || []).map(r => ({
@@ -361,6 +378,8 @@ const MapBuilder = () => {
       symbolType: l.symbolType,
       symbolSize: l.symbolSize,
       color: l.color,
+      styleRule: l.styleRule,
+      layerTitle: l.formTitle,
     })));
 
   if (loading) {
@@ -447,6 +466,7 @@ const MapBuilder = () => {
                         onChangeColor={handleChangeLayerColor}
                         onChangeSymbol={handleChangeSymbol}
                         onChangeSize={handleChangeSize}
+                        onChangeStyleRule={handleChangeStyleRule}
                       />
                     </TabsContent>
 
@@ -468,6 +488,7 @@ const MapBuilder = () => {
               responses={visibleResponses}
               basemapUrl={selectedBasemap.url}
               basemapAttribution={selectedBasemap.attribution}
+              enableClustering={enableClustering}
             />
           </main>
         </div>

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, Trash2, Plus } from "lucide-react";
+import { Eye, EyeOff, Trash2, Plus, Settings } from "lucide-react";
 import { useForms } from "@/hooks/use-forms";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
   SelectContent,
@@ -11,6 +12,18 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { SYMBOL_TYPES, SYMBOL_SIZES, SymbolType, SymbolSize } from "@/lib/mapSymbols";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+
+interface StyleRule {
+  field: string;
+  values: { value: string; color: string }[];
+}
 
 interface MapLayer {
   id: string;
@@ -20,6 +33,7 @@ interface MapLayer {
   color: string;
   symbolType?: SymbolType;
   symbolSize?: SymbolSize;
+  styleRule?: StyleRule;
   responses?: any[];
 }
 
@@ -31,6 +45,7 @@ interface MapLayerPanelProps {
   onChangeColor: (layerId: string, color: string) => void;
   onChangeSymbol: (layerId: string, symbolType: SymbolType) => void;
   onChangeSize: (layerId: string, symbolSize: SymbolSize) => void;
+  onChangeStyleRule: (layerId: string, styleRule: StyleRule | undefined) => void;
 }
 
 export const MapLayerPanel = ({
@@ -41,19 +56,108 @@ export const MapLayerPanel = ({
   onChangeColor,
   onChangeSymbol,
   onChangeSize,
+  onChangeStyleRule,
 }: MapLayerPanelProps) => {
   const { forms } = useForms();
   const [selectedFormId, setSelectedFormId] = useState<string>("");
+  const [styleDialogOpen, setStyleDialogOpen] = useState(false);
+  const [currentLayerId, setCurrentLayerId] = useState<string>("");
+  const [formFields, setFormFields] = useState<string[]>([]);
+  const [selectedField, setSelectedField] = useState<string>("");
+  const [fieldValues, setFieldValues] = useState<Array<{ value: string; color: string }>>([]);
+  const [currentLayer, setCurrentLayer] = useState<MapLayer | null>(null);
 
   const availableForms = forms.filter(
     (form) => !layers.some((layer) => layer.formId === form.id)
   );
+
+  useEffect(() => {
+    if (styleDialogOpen && currentLayer) {
+      loadFormFields(currentLayer.formId);
+      if (currentLayer.styleRule) {
+        setSelectedField(currentLayer.styleRule.field);
+        setFieldValues(currentLayer.styleRule.values);
+      }
+    }
+  }, [styleDialogOpen, currentLayer]);
+
+  const loadFormFields = async (formId: string) => {
+    try {
+      const { data: responses } = await supabase
+        .from("form_responses")
+        .select("geojson")
+        .eq("form_id", formId)
+        .limit(100);
+
+      if (responses && responses.length > 0) {
+        const fields = new Set<string>();
+        responses.forEach(r => {
+          const geojson = r.geojson as any;
+          if (geojson?.properties) {
+            Object.keys(geojson.properties).forEach(k => {
+              if (k !== 'id') fields.add(k);
+            });
+          }
+        });
+        setFormFields(Array.from(fields));
+      }
+    } catch (error) {
+      console.error("Error loading form fields:", error);
+    }
+  };
+
+  const loadFieldValues = async (formId: string, field: string) => {
+    try {
+      const { data: responses } = await supabase
+        .from("form_responses")
+        .select("geojson")
+        .eq("form_id", formId);
+
+      if (responses) {
+        const uniqueValues = new Set<string>();
+        responses.forEach(r => {
+          const geojson = r.geojson as any;
+          if (geojson?.properties?.[field]) {
+            uniqueValues.add(String(geojson.properties[field]));
+          }
+        });
+
+        const values = Array.from(uniqueValues).map(v => ({
+          value: v,
+          color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
+        }));
+        setFieldValues(values);
+      }
+    } catch (error) {
+      console.error("Error loading field values:", error);
+    }
+  };
 
   const handleAddLayer = () => {
     if (selectedFormId) {
       onAddLayer(selectedFormId);
       setSelectedFormId("");
     }
+  };
+
+  const handleOpenStyleDialog = (layer: MapLayer) => {
+    setCurrentLayer(layer);
+    setCurrentLayerId(layer.id);
+    setStyleDialogOpen(true);
+  };
+
+  const handleApplyStyleRule = () => {
+    if (selectedField && fieldValues.length > 0) {
+      onChangeStyleRule(currentLayerId, {
+        field: selectedField,
+        values: fieldValues,
+      });
+    } else {
+      onChangeStyleRule(currentLayerId, undefined);
+    }
+    setStyleDialogOpen(false);
+    setSelectedField("");
+    setFieldValues([]);
   };
 
   return (
@@ -128,12 +232,28 @@ export const MapLayerPanel = ({
                 <Button
                   variant="ghost"
                   size="sm"
+                  onClick={() => handleOpenStyleDialog(layer)}
+                  className="h-8 w-8 p-0"
+                  title="Attribute-based styling"
+                >
+                  <Settings className="w-4 h-4" />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => onRemoveLayer(layer.id)}
                   className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
+
+              {layer.styleRule && (
+                <div className="text-xs text-muted-foreground px-2 py-1 bg-accent rounded">
+                  Styled by: {layer.styleRule.field}
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
@@ -181,6 +301,78 @@ export const MapLayerPanel = ({
           ))}
         </div>
       )}
+
+      <Dialog open={styleDialogOpen} onOpenChange={setStyleDialogOpen}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Attribute-Based Styling</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Select Field</Label>
+              <Select
+                value={selectedField}
+                onValueChange={(value) => {
+                  setSelectedField(value);
+                  if (currentLayer) {
+                    loadFieldValues(currentLayer.formId, value);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a field..." />
+                </SelectTrigger>
+                <SelectContent className="z-[100] bg-popover">
+                  {formFields.map((field) => (
+                    <SelectItem key={field} value={field}>
+                      {field}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {fieldValues.length > 0 && (
+              <div className="space-y-2">
+                <Label>Assign Colors to Values</Label>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {fieldValues.map((fv, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={fv.color}
+                        onChange={(e) => {
+                          const updated = [...fieldValues];
+                          updated[idx].color = e.target.value;
+                          setFieldValues(updated);
+                        }}
+                        className="w-10 h-8 rounded cursor-pointer"
+                      />
+                      <span className="text-sm flex-1 truncate">{fv.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2 justify-end pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStyleDialogOpen(false);
+                  setSelectedField("");
+                  setFieldValues([]);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleApplyStyleRule}>
+                Apply Style Rule
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

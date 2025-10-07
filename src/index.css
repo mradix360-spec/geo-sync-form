@@ -195,3 +195,33 @@ All colors MUST be HSL.
   border-radius: 0.5rem;
   border: 2px dashed hsl(var(--primary));
 }
+
+/* Custom Leaflet Popup Styles */
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.leaflet-popup-content {
+  margin: 12px;
+  font-family: inherit;
+}
+
+.custom-popup .leaflet-popup-content {
+  min-width: 200px;
+}
+
+/* Marker Cluster Styles */
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+  background-color: hsl(var(--primary) / 0.2);
+}
+
+.marker-cluster-small div,
+.marker-cluster-medium div,
+.marker-cluster-large div {
+  background-color: hsl(var(--primary));
+  color: white;
+  font-weight: 600;
+}

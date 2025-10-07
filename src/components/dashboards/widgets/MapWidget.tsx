@@ -40,13 +40,21 @@ export const MapWidget = ({ config, onUpdate }: MapWidgetProps) => {
       const allResponses: any[] = [];
 
       for (const layer of mapConfig.layers || []) {
+        if (!layer.visible) continue;
+        
         const { data } = await supabase
           .from("form_responses")
           .select("*")
           .eq("form_id", layer.formId);
 
         if (data) {
-          allResponses.push(...data);
+          allResponses.push(...data.map(r => ({
+            geojson: r.geojson,
+            symbolType: layer.symbolType,
+            symbolSize: layer.symbolSize,
+            color: layer.color,
+            styleRule: layer.styleRule,
+          })));
         }
       }
 
