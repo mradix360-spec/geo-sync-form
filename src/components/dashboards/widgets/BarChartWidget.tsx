@@ -105,7 +105,7 @@ export const BarChartWidget = ({ config, onUpdate }: BarChartWidgetProps) => {
   return (
     <>
       <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
-        <CardTitle className="text-sm font-medium flex-1">
+        <CardTitle className="text-sm font-medium flex-1 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
           {config.title || "Bar Chart"}
         </CardTitle>
         <WidgetConfig
@@ -120,21 +120,37 @@ export const BarChartWidget = ({ config, onUpdate }: BarChartWidgetProps) => {
       <CardContent>
         <ResponsiveContainer width="100%" height={250}>
           <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
+            <defs>
+              <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={config.color || "hsl(var(--primary))"} stopOpacity={0.9}/>
+                <stop offset="95%" stopColor={config.color || "hsl(var(--primary))"} stopOpacity={0.4}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" />
             <XAxis 
               dataKey="category" 
               angle={-45}
               textAnchor="end"
               height={80}
               interval={0}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
             />
-            <YAxis />
-            <Tooltip />
-            <Legend />
+            <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+            <Tooltip 
+              contentStyle={{
+                backgroundColor: 'hsl(var(--card))',
+                border: '1px solid hsl(var(--border))',
+                borderRadius: '8px',
+                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+              }}
+            />
+            <Legend wrapperStyle={{ paddingTop: '10px' }} />
             <Bar 
               dataKey="value" 
-              fill={config.color || "hsl(var(--primary))"} 
+              fill="url(#barGradient)"
               name={config.statistic?.toUpperCase() || 'COUNT'}
+              radius={[8, 8, 0, 0]}
+              animationDuration={800}
             />
           </BarChart>
         </ResponsiveContainer>

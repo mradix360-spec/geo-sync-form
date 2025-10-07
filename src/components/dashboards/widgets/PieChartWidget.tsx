@@ -81,7 +81,7 @@ export const PieChartWidget = ({ config, onUpdate }: PieChartWidgetProps) => {
   return (
     <>
       <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
-        <CardTitle className="text-sm font-medium flex-1">
+        <CardTitle className="text-sm font-medium flex-1 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
           {config.title || "Distribution"}
         </CardTitle>
         <WidgetConfig
@@ -95,6 +95,14 @@ export const PieChartWidget = ({ config, onUpdate }: PieChartWidgetProps) => {
       <CardContent>
         <ResponsiveContainer width="100%" height={250}>
           <PieChart>
+            <defs>
+              {COLORS.map((color, index) => (
+                <linearGradient key={index} id={`pieGradient${index}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={color} stopOpacity={0.9}/>
+                  <stop offset="95%" stopColor={color} stopOpacity={0.6}/>
+                </linearGradient>
+              ))}
+            </defs>
             <Pie
               data={data}
               cx="50%"
@@ -104,16 +112,24 @@ export const PieChartWidget = ({ config, onUpdate }: PieChartWidgetProps) => {
               fill="#8884d8"
               dataKey="value"
               label={(entry) => `${entry.name}: ${entry.value}`}
+              animationDuration={800}
             >
               {data.map((entry, index) => (
                 <Cell 
                   key={`cell-${index}`} 
-                  fill={config.color || COLORS[index % COLORS.length]} 
+                  fill={config.color || `url(#pieGradient${index % COLORS.length})`} 
                 />
               ))}
             </Pie>
-            <Tooltip />
-            <Legend />
+            <Tooltip 
+              contentStyle={{
+                backgroundColor: 'hsl(var(--card))',
+                border: '1px solid hsl(var(--border))',
+                borderRadius: '8px',
+                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+              }}
+            />
+            <Legend wrapperStyle={{ paddingTop: '10px' }} />
           </PieChart>
         </ResponsiveContainer>
       </CardContent>

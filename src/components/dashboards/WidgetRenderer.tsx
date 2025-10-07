@@ -1,3 +1,4 @@
+import { Card } from "@/components/ui/card";
 import { StatCardWidget } from "./widgets/StatCardWidget";
 import { BarChartWidget } from "./widgets/BarChartWidget";
 import { PieChartWidget } from "./widgets/PieChartWidget";
@@ -24,34 +25,45 @@ interface WidgetRendererProps {
 export const WidgetRenderer = ({ widget, onUpdate }: WidgetRendererProps) => {
   const { type, config } = widget;
 
-  switch (type) {
-    case "stat-card":
-      return <StatCardWidget config={config} onUpdate={onUpdate} />;
-    case "bar-chart":
-      return <BarChartWidget config={config} onUpdate={onUpdate} />;
-    case "pie-chart":
-      return <PieChartWidget config={config} onUpdate={onUpdate} />;
-    case "line-chart":
-      return <LineChartWidget config={config} onUpdate={onUpdate} />;
-    case "map-widget":
-      return <MapWidget config={config} onUpdate={onUpdate} />;
-    case "response-list":
-      return <ResponseListWidget config={config} onUpdate={onUpdate} />;
-    case "data-table":
-      return <DataTableWidget config={config} onUpdate={onUpdate} />;
-    case "activity-feed":
-      return <ActivityFeedWidget config={config} onUpdate={onUpdate} />;
-    case "calendar-widget":
-      return <CalendarWidget config={config} onUpdate={onUpdate} />;
-    case "user-stats":
-      return <UserStatsWidget config={config} onUpdate={onUpdate} />;
-    case "location-heatmap":
-      return <LocationHeatmapWidget config={config} onUpdate={onUpdate} />;
-    case "goal-tracker":
-      return <GoalTrackerWidget config={config} onUpdate={onUpdate} />;
-    case "quick-stats":
-      return <QuickStatsWidget config={config} onUpdate={onUpdate} />;
-    default:
-      return <div className="p-4 text-muted-foreground">Unknown widget type: {type}</div>;
-  }
+  const renderWidget = () => {
+    switch (type) {
+      case "stat-card":
+        return <StatCardWidget config={config} onUpdate={onUpdate} />;
+      case "bar-chart":
+        return <BarChartWidget config={config} onUpdate={onUpdate} />;
+      case "pie-chart":
+        return <PieChartWidget config={config} onUpdate={onUpdate} />;
+      case "line-chart":
+        return <LineChartWidget config={config} onUpdate={onUpdate} />;
+      case "map-widget":
+        return <MapWidget config={config} onUpdate={onUpdate} />;
+      case "response-list":
+        return <ResponseListWidget config={config} onUpdate={onUpdate} />;
+      case "data-table":
+        return <DataTableWidget config={config} onUpdate={onUpdate} />;
+      case "activity-feed":
+        return <ActivityFeedWidget config={config} onUpdate={onUpdate} />;
+      case "calendar-widget":
+        return <CalendarWidget config={config} onUpdate={onUpdate} />;
+      case "user-stats":
+        return <UserStatsWidget config={config} onUpdate={onUpdate} />;
+      case "location-heatmap":
+        return <LocationHeatmapWidget config={config} onUpdate={onUpdate} />;
+      case "goal-tracker":
+        return <GoalTrackerWidget config={config} onUpdate={onUpdate} />;
+      case "quick-stats":
+        return <QuickStatsWidget config={config} onUpdate={onUpdate} />;
+      default:
+        return <div className="p-4 text-muted-foreground">Unknown widget type: {type}</div>;
+    }
+  };
+
+  return (
+    <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-gradient-to-br from-card via-card to-card/50 backdrop-blur-sm overflow-hidden group relative">
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/3 via-transparent to-primary/3 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <div className="relative z-10">
+        {renderWidget()}
+      </div>
+    </Card>
+  );
 };

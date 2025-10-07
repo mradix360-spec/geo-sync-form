@@ -38,52 +38,57 @@ export const QuickStatsWidget = ({ config, onUpdate }: QuickStatsWidgetProps) =>
 
   return (
     <>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">Quick Overview</CardTitle>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+          Quick Overview
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-blue-500/10 rounded">
-                <FileText className="h-4 w-4 text-blue-500" />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 hover:shadow-lg hover:scale-105 transition-all duration-300 group animate-fade-in">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500/20 rounded-lg group-hover:scale-110 transition-transform">
+                <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <div className="text-xl font-bold">{stats.forms}</div>
-                <div className="text-xs text-muted-foreground">Forms</div>
+                <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">{stats.forms}</div>
+                <div className="text-xs text-blue-600/70 dark:text-blue-400/70 font-medium">Forms</div>
               </div>
             </div>
           </div>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-green-500/10 rounded">
-                <Activity className="h-4 w-4 text-green-500" />
+          
+          <div className="p-4 rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/5 border border-green-500/20 hover:shadow-lg hover:scale-105 transition-all duration-300 group animate-fade-in" style={{ animationDelay: '50ms' }}>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-500/20 rounded-lg group-hover:scale-110 transition-transform">
+                <Activity className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <div className="text-xl font-bold">{stats.responses}</div>
-                <div className="text-xs text-muted-foreground">Responses</div>
+                <div className="text-2xl font-bold text-green-700 dark:text-green-300">{stats.responses}</div>
+                <div className="text-xs text-green-600/70 dark:text-green-400/70 font-medium">Responses</div>
               </div>
             </div>
           </div>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-purple-500/10 rounded">
-                <Map className="h-4 w-4 text-purple-500" />
+          
+          <div className="p-4 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20 hover:shadow-lg hover:scale-105 transition-all duration-300 group animate-fade-in" style={{ animationDelay: '100ms' }}>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-500/20 rounded-lg group-hover:scale-110 transition-transform">
+                <Map className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <div className="text-xl font-bold">{stats.maps}</div>
-                <div className="text-xs text-muted-foreground">Maps</div>
+                <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">{stats.maps}</div>
+                <div className="text-xs text-purple-600/70 dark:text-purple-400/70 font-medium">Maps</div>
               </div>
             </div>
           </div>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-orange-500/10 rounded">
-                <Users className="h-4 w-4 text-orange-500" />
+          
+          <div className="p-4 rounded-xl bg-gradient-to-br from-orange-500/10 to-orange-600/5 border border-orange-500/20 hover:shadow-lg hover:scale-105 transition-all duration-300 group animate-fade-in" style={{ animationDelay: '150ms' }}>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-500/20 rounded-lg group-hover:scale-110 transition-transform">
+                <Users className="h-5 w-5 text-orange-600 dark:text-orange-400" />
               </div>
               <div>
-                <div className="text-xl font-bold">{stats.users}</div>
-                <div className="text-xs text-muted-foreground">Users</div>
+                <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">{stats.users}</div>
+                <div className="text-xs text-orange-600/70 dark:text-orange-400/70 font-medium">Users</div>
               </div>
             </div>
           </div>

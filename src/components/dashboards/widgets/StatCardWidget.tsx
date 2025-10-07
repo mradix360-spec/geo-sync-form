@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowUp, ArrowDown } from "lucide-react";
 import { WidgetConfig } from "../WidgetConfig";
 import { calculateStatistics, filterByDateRange, formatStatisticValue } from "@/lib/statistics";
 
@@ -109,7 +109,7 @@ export const StatCardWidget = ({ config, onUpdate }: StatCardWidgetProps) => {
   return (
     <>
       <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
-        <CardTitle className="text-sm font-medium flex-1">
+        <CardTitle className="text-sm font-medium flex-1 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
           {config.title || "Statistic"}
         </CardTitle>
         <WidgetConfig
@@ -123,22 +123,37 @@ export const StatCardWidget = ({ config, onUpdate }: StatCardWidgetProps) => {
         />
       </CardHeader>
       <CardContent>
-        <div className="text-3xl font-bold" style={{ color: config.color }}>
-          {formatStatisticValue(value, config.statistic || 'count')}
-        </div>
-        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-          {trend > 0 ? (
-            <TrendingUp className="h-3 w-3 text-green-500" />
-          ) : (
-            <TrendingDown className="h-3 w-3 text-red-500" />
+        <div className="flex items-baseline gap-3 mb-3">
+          <div className="text-4xl font-bold bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent animate-scale-in" style={{ 
+            color: config.color,
+            WebkitTextFillColor: config.color || undefined 
+          }}>
+            {formatStatisticValue(value, config.statistic || 'count')}
+          </div>
+          {trend !== 0 && (
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-sm font-medium animate-fade-in ${
+              trend > 0 
+                ? 'bg-green-500/10 text-green-600 dark:text-green-400' 
+                : 'bg-red-500/10 text-red-600 dark:text-red-400'
+            }`}>
+              {trend > 0 ? (
+                <TrendingUp className="h-4 w-4" />
+              ) : (
+                <TrendingDown className="h-4 w-4" />
+              )}
+              <span>{Math.abs(trend).toFixed(1)}%</span>
+            </div>
           )}
-          <span>{Math.abs(trend).toFixed(1)}% vs previous period</span>
         </div>
-        {config.field && (
-          <p className="text-xs text-muted-foreground mt-2">
-            {config.statistic?.toUpperCase() || 'COUNT'} of {config.field}
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">
+            {config.field 
+              ? `${config.statistic?.toUpperCase() || 'COUNT'} of ${config.field}`
+              : 'Total count'
+            }
           </p>
-        )}
+          <p className="text-xs text-muted-foreground/70">vs previous 30 days</p>
+        </div>
       </CardContent>
     </>
   );

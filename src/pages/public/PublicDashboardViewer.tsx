@@ -91,23 +91,28 @@ export default function PublicDashboardViewer() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="bg-card border-b p-4 sticky top-0 z-10">
-        <h1 className="text-2xl font-bold">{dashboardConfig.title}</h1>
-        {dashboardConfig.description && (
-          <p className="text-sm text-muted-foreground mt-1">{dashboardConfig.description}</p>
-        )}
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <header className="bg-card/95 backdrop-blur-sm border-b sticky top-0 z-10 shadow-sm">
+        <div className="max-w-[1800px] mx-auto px-6 py-4">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            {dashboardConfig.title}
+          </h1>
+          {dashboardConfig.description && (
+            <p className="text-sm text-muted-foreground mt-1">{dashboardConfig.description}</p>
+          )}
+        </div>
       </header>
       
-      <div className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {dashboardConfig.config.widgets?.map((widget) => (
+      <div className="max-w-[1800px] mx-auto p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+          {dashboardConfig.config.widgets?.map((widget, index) => (
             <div
               key={widget.id}
-              className="min-h-[300px]"
+              className="min-h-[300px] animate-scale-in"
               style={{
                 gridColumn: `span ${widget.position.w}`,
                 gridRow: `span ${widget.position.h}`,
+                animationDelay: `${index * 50}ms`
               }}
             >
               <WidgetRenderer widget={widget} onUpdate={() => {}} />
