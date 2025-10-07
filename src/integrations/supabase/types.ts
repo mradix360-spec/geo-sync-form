@@ -426,6 +426,7 @@ export type Database = {
           created_at: string | null
           current_users: number | null
           id: string
+          landing_config: Json | null
           max_users: number | null
           name: string
           staff_count: number | null
@@ -436,6 +437,7 @@ export type Database = {
           created_at?: string | null
           current_users?: number | null
           id?: string
+          landing_config?: Json | null
           max_users?: number | null
           name: string
           staff_count?: number | null
@@ -446,6 +448,7 @@ export type Database = {
           created_at?: string | null
           current_users?: number | null
           id?: string
+          landing_config?: Json | null
           max_users?: number | null
           name?: string
           staff_count?: number | null
@@ -586,6 +589,54 @@ export type Database = {
           srtext?: string | null
         }
         Relationships: []
+      }
+      user_activity: {
+        Row: {
+          action: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          object_id: string | null
+          object_type: string | null
+          organisation_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          object_id?: string | null
+          object_type?: string | null
+          organisation_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          object_id?: string | null
+          object_type?: string | null
+          organisation_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_activity_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_activity_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -1236,6 +1287,16 @@ export type Database = {
       jsonb: {
         Args: { "": unknown }
         Returns: Json
+      }
+      log_user_activity: {
+        Args: {
+          p_action: string
+          p_details?: Json
+          p_object_id?: string
+          p_object_type?: string
+          p_user_id: string
+        }
+        Returns: string
       }
       longtransactionsenabled: {
         Args: Record<PropertyKey, never>
