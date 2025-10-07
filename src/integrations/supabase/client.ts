@@ -8,23 +8,26 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+// Global headers object that will be updated with auth token
+const globalHeaders: Record<string, string> = {};
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    persistSession: false, // We manage sessions ourselves
+    persistSession: false,
     autoRefreshToken: false,
   },
   global: {
-    headers: {}
+    headers: globalHeaders
   }
 });
 
 // Function to update Supabase client with custom JWT
 export const setSupabaseAuth = (token: string | null) => {
   if (token) {
+    globalHeaders['Authorization'] = `Bearer ${token}`;
+    // Also update realtime auth
     supabase.realtime.setAuth(token);
-    // Set the Authorization header for all requests
-    (supabase as any).rest.headers['Authorization'] = `Bearer ${token}`;
   } else {
-    delete (supabase as any).rest.headers['Authorization'];
+    delete globalHeaders['Authorization'];
   }
 };

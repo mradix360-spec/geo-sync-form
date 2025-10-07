@@ -109,7 +109,8 @@ serve(async (req) => {
 
     // Auto-login: create session token
     const { SignJWT } = await import("https://deno.land/x/jose@v5.2.0/index.ts");
-    const JWT_SECRET = Deno.env.get('JWT_SECRET') ?? 'your-secret-key-change-in-production';
+    // Use Supabase JWT secret so auth.uid() works in RLS policies
+    const JWT_SECRET = Deno.env.get('SUPABASE_JWT_SECRET') ?? Deno.env.get('JWT_SECRET') ?? 'your-secret-key-change-in-production';
     
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
@@ -118,12 +119,14 @@ serve(async (req) => {
       sub: userData.id, // Supabase expects 'sub' for user ID
       email: userData.email,
       role: 'authenticated',
+      aud: 'authenticated',
       user_metadata: {
         full_name: userData.full_name,
         organisation_id: userData.organisation_id
       }
     })
       .setProtectedHeader({ alg: 'HS256' })
+      .setIssuer(Deno.env.get('SUPABASE_URL') ?? '')
       .setIssuedAt()
       .setAudience('authenticated')
       .setExpirationTime(Math.floor(expiresAt.getTime() / 1000))

@@ -7,7 +7,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const JWT_SECRET = Deno.env.get('JWT_SECRET') ?? 'your-secret-key-change-in-production';
+// Use Supabase JWT secret so auth.uid() works in RLS policies
+const JWT_SECRET = Deno.env.get('SUPABASE_JWT_SECRET') ?? Deno.env.get('JWT_SECRET') ?? 'your-secret-key-change-in-production';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -70,9 +71,11 @@ serve(async (req) => {
       sub: String(payload.sub || payload.userId || sessionData.user_id), // Support both claim formats
       email: String(payload.email || ''),
       role: 'authenticated',
+      aud: 'authenticated',
       user_metadata: payload.user_metadata || {}
     })
       .setProtectedHeader({ alg: 'HS256' })
+      .setIssuer(Deno.env.get('SUPABASE_URL') ?? '')
       .setIssuedAt()
       .setAudience('authenticated')
       .setExpirationTime(Math.floor(expiresAt.getTime() / 1000))
