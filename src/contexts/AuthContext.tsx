@@ -2,7 +2,6 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
 interface User {
   id: string;
@@ -14,7 +13,6 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, fullName: string, orgName?: string) => Promise<void>;
@@ -23,75 +21,77 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const TOKEN_KEY = 'auth_token';
+const TOKEN_EXPIRY_KEY = 'auth_token_expiry';
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserRoles = async (userId: string) => {
-    const { data: roles } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId);
-
-    const { data: userData } = await supabase
-      .from('users')
-      .select('full_name, organisation_id')
-      .eq('id', userId)
-      .single();
-
-    return {
-      roles: roles?.map(r => r.role) || [],
-      full_name: userData?.full_name,
-      organisation_id: userData?.organisation_id
-    };
-  };
-
+  // Verify session on mount and set up periodic refresh
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        
-        if (session?.user) {
-          // Defer additional Supabase calls with setTimeout to avoid deadlock
-          setTimeout(async () => {
-            const userDetails = await fetchUserRoles(session.user.id);
-            setUser({
-              id: session.user.id,
-              email: session.user.email!,
-              roles: userDetails.roles,
-              full_name: userDetails.full_name,
-              organisation_id: userDetails.organisation_id
-            });
-          }, 0);
-        } else {
-          setUser(null);
-        }
-        
+    const verifySession = async () => {
+      const token = localStorage.getItem(TOKEN_KEY);
+      const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
+
+      if (!token || !expiry) {
         setLoading(false);
+        return;
       }
-    );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        setTimeout(async () => {
-          const userDetails = await fetchUserRoles(session.user.id);
-          setUser({
-            id: session.user.id,
-            email: session.user.email!,
-            roles: userDetails.roles,
-            full_name: userDetails.full_name,
-            organisation_id: userDetails.organisation_id
-          });
-        }, 0);
+      // Check if token is expired
+      if (new Date(expiry) < new Date()) {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(TOKEN_EXPIRY_KEY);
+        setLoading(false);
+        return;
       }
+
+      // Verify token with backend
+      try {
+        const { data, error } = await supabase.functions.invoke('auth-verify-session', {
+          body: { token }
+        });
+
+        if (error || !data.valid) {
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(TOKEN_EXPIRY_KEY);
+          setUser(null);
+        } else {
+          setUser(data.user);
+        }
+      } catch (error) {
+        console.error('Session verification error:', error);
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(TOKEN_EXPIRY_KEY);
+        setUser(null);
+      }
+
       setLoading(false);
-    });
+    };
 
-    return () => subscription.unsubscribe();
+    verifySession();
+
+    // Set up token refresh interval (every 6 hours)
+    const refreshInterval = setInterval(async () => {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (!token) return;
+
+      try {
+        const { data, error } = await supabase.functions.invoke('auth-refresh-token', {
+          body: { token }
+        });
+
+        if (!error && data.success) {
+          localStorage.setItem(TOKEN_KEY, data.token);
+          localStorage.setItem(TOKEN_EXPIRY_KEY, data.expiresAt);
+        }
+      } catch (error) {
+        console.error('Token refresh error:', error);
+      }
+    }, 6 * 60 * 60 * 1000); // 6 hours
+
+    return () => clearInterval(refreshInterval);
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -109,6 +109,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(data?.error || 'Invalid credentials');
       }
 
+      // Store token and expiry
+      localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem(TOKEN_EXPIRY_KEY, data.expiresAt);
+      
+      setUser(data.user);
+      
       toast({
         title: "Welcome back!",
         description: `Logged in as ${email}`,
@@ -134,6 +140,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(data?.error || 'Registration failed');
       }
 
+      // Store token and expiry (auto-login after registration)
+      localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem(TOKEN_EXPIRY_KEY, data.expiresAt);
+      
+      setUser(data.user);
+      
       toast({
         title: "Account created!",
         description: "Welcome to GeoSync Forms",
@@ -145,7 +157,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    const token = localStorage.getItem(TOKEN_KEY);
+    
+    if (token) {
+      try {
+        await supabase.functions.invoke('auth-logout', {
+          body: { token }
+        });
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    }
+
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TOKEN_EXPIRY_KEY);
+    setUser(null);
+    
     toast({
       title: "Logged out",
       description: "You have been logged out successfully",
@@ -153,7 +180,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,10 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SignJWT } from "https://deno.land/x/jose@v5.2.0/index.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const JWT_SECRET = Deno.env.get('JWT_SECRET') ?? 'your-secret-key-change-in-production';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -56,33 +59,67 @@ serve(async (req) => {
       });
 
     if (verifyError || !verifyResult) {
+      console.error('Password verification error:', verifyError);
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid email or password' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Sign in with Supabase Auth
-    const { data: authData, error: signInError } = await supabaseClient.auth.signInWithPassword({
-      email,
-      password
-    });
+    // Get user roles
+    const { data: rolesData } = await supabaseClient
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userData.id);
 
-    if (signInError || !authData.session) {
+    const roles = rolesData?.map(r => r.role) || [];
+
+    // Generate custom JWT token
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
+
+    const token = await new SignJWT({
+      userId: userData.id,
+      email: userData.email,
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime(Math.floor(expiresAt.getTime() / 1000))
+      .setJti(crypto.randomUUID())
+      .sign(new TextEncoder().encode(JWT_SECRET));
+
+    // Store session in database
+    const { error: sessionError } = await supabaseClient
+      .from('sessions')
+      .insert({
+        user_id: userData.id,
+        token,
+        expires_at: expiresAt.toISOString(),
+        ip_address: req.headers.get('x-forwarded-for') || 'unknown',
+        user_agent: req.headers.get('user-agent') || 'unknown'
+      });
+
+    if (sessionError) {
+      console.error('Session creation error:', sessionError);
       return new Response(
-        JSON.stringify({ success: false, error: 'Failed to create auth session' }),
+        JSON.stringify({ success: false, error: 'Failed to create session' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    console.log('Login successful for user:', userData.email);
+
     return new Response(
       JSON.stringify({ 
         success: true,
+        token,
+        expiresAt: expiresAt.toISOString(),
         user: {
           id: userData.id,
           email: userData.email,
           full_name: userData.full_name,
-          organisation_id: userData.organisation_id
+          organisation_id: userData.organisation_id,
+          roles
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

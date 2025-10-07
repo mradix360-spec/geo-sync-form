@@ -9,6 +9,15 @@ verify_jwt = false
 [functions.auth-register]
 verify_jwt = false
 
+[functions.auth-verify-session]
+verify_jwt = false
+
+[functions.auth-logout]
+verify_jwt = false
+
+[functions.auth-refresh-token]
+verify_jwt = false
+
 [functions.assign-form]
 verify_jwt = true
 

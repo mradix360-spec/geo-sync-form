@@ -69,30 +69,14 @@ serve(async (req) => {
       throw new Error('Failed to hash password');
     }
 
-    // Create Supabase Auth user first
-    const { data: authData, error: signUpError } = await supabaseClient.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: fullName,
-        organisation_id: orgId
-      }
-    });
+    // Generate a new UUID for the user
+    const userId = crypto.randomUUID();
 
-    if (signUpError || !authData.user) {
-      console.error('Auth user creation error:', signUpError);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Failed to create auth user' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Create user in custom users table with the same ID
+    // Insert user into custom users table
     const { data: userData, error: userError } = await supabaseClient
       .from('users')
       .insert({
-        id: authData.user.id, // Use the auth user ID
+        id: userId,
         email,
         password_hash: passwordHash,
         full_name: fullName,
@@ -104,8 +88,6 @@ serve(async (req) => {
 
     if (userError) {
       console.error('User creation error:', userError);
-      // Clean up auth user if custom user creation fails
-      await supabaseClient.auth.admin.deleteUser(authData.user.id);
       return new Response(
         JSON.stringify({ success: false, error: 'Failed to create user' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -125,14 +107,53 @@ serve(async (req) => {
       console.error('Role assignment error:', roleError);
     }
 
+    // Auto-login: create session token
+    const { SignJWT } = await import("https://deno.land/x/jose@v5.2.0/index.ts");
+    const JWT_SECRET = Deno.env.get('JWT_SECRET') ?? 'your-secret-key-change-in-production';
+    
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    const token = await new SignJWT({
+      userId: userData.id,
+      email: userData.email,
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime(Math.floor(expiresAt.getTime() / 1000))
+      .setJti(crypto.randomUUID())
+      .sign(new TextEncoder().encode(JWT_SECRET));
+
+    // Store session
+    await supabaseClient
+      .from('sessions')
+      .insert({
+        user_id: userData.id,
+        token,
+        expires_at: expiresAt.toISOString(),
+        ip_address: req.headers.get('x-forwarded-for') || 'unknown',
+        user_agent: req.headers.get('user-agent') || 'unknown'
+      });
+
+    // Get user roles
+    const { data: rolesData } = await supabaseClient
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userData.id);
+
+    const roles = rolesData?.map(r => r.role) || [];
+
     return new Response(
       JSON.stringify({ 
         success: true,
+        token,
+        expiresAt: expiresAt.toISOString(),
         user: {
           id: userData.id,
           email: userData.email,
           full_name: userData.full_name,
-          organisation_id: userData.organisation_id
+          organisation_id: userData.organisation_id,
+          roles
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
