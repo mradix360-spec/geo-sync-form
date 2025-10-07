@@ -239,6 +239,7 @@ const MapViewer = () => {
               responses={responses} 
               basemapUrl={currentBasemap.url}
               basemapAttribution={currentBasemap.attribution}
+              showControls={true}
             />
           </main>
         </div>

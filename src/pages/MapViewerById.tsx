@@ -218,6 +218,13 @@ const MapViewerById = () => {
           responses={responses}
           basemapUrl={mapConfig.config.basemap.url}
           basemapAttribution={mapConfig.config.basemap.attribution}
+          layers={mapConfig.config.layers?.map(l => ({
+            id: l.id,
+            formTitle: l.name,
+            visible: l.visible,
+            color: l.color,
+          })) || []}
+          showControls={true}
         />
       </div>
     </div>
