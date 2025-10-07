@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, CheckCircle2, ArrowRight, Sparkles, Zap, Shield, Users } from "lucide-react";
+import { Loader2, CheckCircle2, ArrowRight, Sparkles, Zap, Shield, Users, FileText, Map, BarChart3 } from "lucide-react";
 
 interface OrgConfig {
   id: string;
@@ -28,6 +28,9 @@ export default function OrgLandingPage() {
   const [org, setOrg] = useState<OrgConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [publicForms, setPublicForms] = useState<any[]>([]);
+  const [publicMaps, setPublicMaps] = useState<any[]>([]);
+  const [publicDashboards, setPublicDashboards] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchOrganization = async () => {
@@ -46,6 +49,32 @@ export default function OrgLandingPage() {
         }
 
         setOrg(data as OrgConfig);
+        
+        // Fetch public content
+        const [formsRes, mapsRes, dashboardsRes] = await Promise.all([
+          supabase
+            .from("forms")
+            .select("id, title, description")
+            .eq("organisation_id", data.id)
+            .eq("is_published", true)
+            .limit(3),
+          supabase
+            .from("maps")
+            .select("id, title, description")
+            .eq("organisation_id", data.id)
+            .limit(3),
+          supabase
+            .from("dashboards")
+            .select("id, title, description")
+            .eq("organisation_id", data.id)
+            .eq("is_public", true)
+            .limit(3)
+        ]);
+
+        if (formsRes.data) setPublicForms(formsRes.data);
+        if (mapsRes.data) setPublicMaps(mapsRes.data);
+        if (dashboardsRes.data) setPublicDashboards(dashboardsRes.data);
+
       } catch (err) {
         console.error("Error fetching organization:", err);
         setError("Organization not found");
@@ -228,51 +257,136 @@ export default function OrgLandingPage() {
         </section>
       )}
 
-      {/* Stats Section */}
-      <section className="py-24 px-4 relative">
-        <div 
-          className="absolute inset-0"
-          style={{ 
-            background: `linear-gradient(135deg, ${primaryColor}08 0%, ${secondaryColor}08 100%)`
-          }}
-        />
-        <div className="container mx-auto max-w-7xl relative z-10">
-          <div className="grid md:grid-cols-3 gap-8 text-center">
-            <div className="space-y-2">
-              <div 
-                className="text-5xl md:text-6xl font-bold"
-                style={{ color: primaryColor }}
-              >
-                99.9%
-              </div>
-              <p className="text-muted-foreground text-lg">Uptime Guarantee</p>
+      {/* Public Content Showcase */}
+      {(publicForms.length > 0 || publicMaps.length > 0 || publicDashboards.length > 0) && (
+        <section className="py-24 px-4 relative">
+          <div 
+            className="absolute inset-0"
+            style={{ 
+              background: `linear-gradient(135deg, ${primaryColor}08 0%, ${secondaryColor}08 100%)`
+            }}
+          />
+          <div className="container mx-auto max-w-7xl relative z-10">
+            <div className="text-center mb-16 space-y-4">
+              <h2 className="text-4xl md:text-5xl font-bold">
+                Explore Our Resources
+              </h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                Discover our collection of forms, maps, and dashboards
+              </p>
             </div>
-            <div className="space-y-2">
-              <div 
-                className="text-5xl md:text-6xl font-bold"
-                style={{ color: secondaryColor }}
-              >
-                24/7
-              </div>
-              <p className="text-muted-foreground text-lg">Support Available</p>
-            </div>
-            <div className="space-y-2">
-              <div 
-                className="text-5xl md:text-6xl font-bold"
-                style={{ 
-                  background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text'
-                }}
-              >
-                1000+
-              </div>
-              <p className="text-muted-foreground text-lg">Active Users</p>
+
+            <div className="grid md:grid-cols-3 gap-8">
+              {/* Forms */}
+              {publicForms.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div 
+                      className="w-12 h-12 rounded-xl flex items-center justify-center"
+                      style={{ backgroundColor: `${primaryColor}20` }}
+                    >
+                      <FileText className="h-6 w-6" style={{ color: primaryColor }} />
+                    </div>
+                    <h3 className="text-2xl font-bold">Forms</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {publicForms.map((form, idx) => (
+                      <Card 
+                        key={form.id}
+                        className="p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-2 hover:border-primary/50"
+                        style={{ 
+                          animationDelay: `${idx * 100}ms`,
+                          animation: 'fade-in 0.5s ease-out forwards'
+                        }}
+                      >
+                        <h4 className="font-semibold text-lg mb-2">{form.title}</h4>
+                        {form.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {form.description}
+                          </p>
+                        )}
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Maps */}
+              {publicMaps.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div 
+                      className="w-12 h-12 rounded-xl flex items-center justify-center"
+                      style={{ backgroundColor: `${secondaryColor}20` }}
+                    >
+                      <Map className="h-6 w-6" style={{ color: secondaryColor }} />
+                    </div>
+                    <h3 className="text-2xl font-bold">Maps</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {publicMaps.map((map, idx) => (
+                      <Card 
+                        key={map.id}
+                        className="p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-2 hover:border-primary/50"
+                        style={{ 
+                          animationDelay: `${idx * 100 + 100}ms`,
+                          animation: 'fade-in 0.5s ease-out forwards'
+                        }}
+                      >
+                        <h4 className="font-semibold text-lg mb-2">{map.title}</h4>
+                        {map.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {map.description}
+                          </p>
+                        )}
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Dashboards */}
+              {publicDashboards.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div 
+                      className="w-12 h-12 rounded-xl flex items-center justify-center"
+                      style={{ 
+                        background: `linear-gradient(135deg, ${primaryColor}20, ${secondaryColor}20)`
+                      }}
+                    >
+                      <BarChart3 
+                        className="h-6 w-6" 
+                        style={{ color: primaryColor }}
+                      />
+                    </div>
+                    <h3 className="text-2xl font-bold">Dashboards</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {publicDashboards.map((dashboard, idx) => (
+                      <Card 
+                        key={dashboard.id}
+                        className="p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-2 hover:border-primary/50"
+                        style={{ 
+                          animationDelay: `${idx * 100 + 200}ms`,
+                          animation: 'fade-in 0.5s ease-out forwards'
+                        }}
+                      >
+                        <h4 className="font-semibold text-lg mb-2">{dashboard.title}</h4>
+                        {dashboard.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {dashboard.description}
+                          </p>
+                        )}
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Final CTA Section */}
       <section className="py-24 px-4 relative">
