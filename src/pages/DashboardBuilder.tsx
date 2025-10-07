@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, Plus, Trash2, GripVertical } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
   Sidebar,
@@ -18,6 +18,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { WidgetLibrary } from "@/components/dashboards/WidgetLibrary";
 import { WidgetRenderer } from "@/components/dashboards/WidgetRenderer";
 import { Card } from "@/components/ui/card";
+import { DashboardFilterProvider } from "@/contexts/DashboardFilterContext";
+import GridLayout from "react-grid-layout";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
 
 interface DashboardWidget {
   id: string;
@@ -196,15 +200,26 @@ const DashboardBuilder = () => {
   };
 
   const handleAddWidget = (type: string, config: any = {}) => {
+    const defaultSizes: Record<string, { w: number; h: number }> = {
+      'map-widget': { w: 6, h: 4 },
+      'spatial-filter': { w: 3, h: 3 },
+      'attribute-filter': { w: 3, h: 3 },
+      'data-table': { w: 6, h: 3 },
+      'bar-chart': { w: 4, h: 3 },
+      'line-chart': { w: 4, h: 3 },
+      'pie-chart': { w: 3, h: 3 },
+    };
+
+    const size = defaultSizes[type] || { w: 3, h: 2 };
+    
     const newWidget: DashboardWidget = {
       id: crypto.randomUUID(),
       type,
       config,
       position: {
-        x: widgets.length % 3,
-        y: Math.floor(widgets.length / 3),
-        w: 1,
-        h: 1,
+        x: (widgets.length * 3) % 12,
+        y: Infinity,
+        ...size,
       },
     };
 
@@ -236,9 +251,29 @@ const DashboardBuilder = () => {
     );
   }
 
+  const handleLayoutChange = (layout: any[]) => {
+    const updatedWidgets = widgets.map(widget => {
+      const layoutItem = layout.find(l => l.i === widget.id);
+      if (layoutItem) {
+        return {
+          ...widget,
+          position: {
+            x: layoutItem.x,
+            y: layoutItem.y,
+            w: layoutItem.w,
+            h: layoutItem.h,
+          },
+        };
+      }
+      return widget;
+    });
+    setWidgets(updatedWidgets);
+  };
+
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex flex-col w-full">
+    <DashboardFilterProvider>
+      <SidebarProvider>
+        <div className="min-h-screen flex flex-col w-full">
         <header className="h-14 border-b border-border bg-card flex items-center px-4 justify-between z-10">
           <div className="flex items-center gap-2">
             <SidebarTrigger />
@@ -298,24 +333,41 @@ const DashboardBuilder = () => {
           </Sidebar>
 
           <main className="flex-1 p-6 overflow-auto bg-muted/20">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-max">
+            <GridLayout
+              className="layout"
+              layout={widgets.map(w => ({ i: w.id, ...w.position }))}
+              cols={12}
+              rowHeight={80}
+              width={1200}
+              onLayoutChange={handleLayoutChange}
+              draggableHandle=".drag-handle"
+              isDraggable={true}
+              isResizable={true}
+            >
               {widgets.map((widget) => (
-                <Card key={widget.id} className="relative group">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => handleRemoveWidget(widget.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                  <WidgetRenderer
-                    widget={widget}
-                    onUpdate={(config) => handleUpdateWidget(widget.id, config)}
-                  />
-                </Card>
+                <div key={widget.id}>
+                  <Card className="relative group h-full">
+                    <div className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity drag-handle cursor-move">
+                      <div className="p-1 bg-background/80 rounded">
+                        <Plus className="h-4 w-4 rotate-45" />
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handleRemoveWidget(widget.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                    <WidgetRenderer
+                      widget={widget}
+                      onUpdate={(config) => handleUpdateWidget(widget.id, config)}
+                    />
+                  </Card>
+                </div>
               ))}
-            </div>
+            </GridLayout>
 
             {widgets.length === 0 && (
               <div className="flex items-center justify-center h-full min-h-[400px]">
@@ -332,6 +384,7 @@ const DashboardBuilder = () => {
         </div>
       </div>
     </SidebarProvider>
+    </DashboardFilterProvider>
   );
 };
 

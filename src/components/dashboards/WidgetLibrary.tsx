@@ -14,6 +14,7 @@ import {
   Activity,
   Target,
   Zap,
+  Filter,
 } from "lucide-react";
 
 interface WidgetType {
@@ -25,6 +26,20 @@ interface WidgetType {
 }
 
 const WIDGET_TYPES: WidgetType[] = [
+  {
+    id: "spatial-filter",
+    name: "Spatial Filter",
+    description: "Filter by location",
+    icon: MapPin,
+    category: "filters",
+  },
+  {
+    id: "attribute-filter",
+    name: "Attribute Filter",
+    description: "Filter by attributes",
+    icon: Filter,
+    category: "filters",
+  },
   {
     id: "stat-card",
     name: "Stat Card",
