@@ -191,7 +191,14 @@ export const FormsList = ({
           <Card 
             key={form.id} 
             className="hover:shadow-lg transition-all cursor-pointer" 
-            onClick={() => navigate(`/form/${form.id}/map`)}
+            onClick={() => {
+              // Field users go directly to submit, others go to map view
+              if (isFieldUser()) {
+                navigate(`/form/${form.id}/submit`);
+              } else {
+                navigate(`/form/${form.id}/map`);
+              }
+            }}
           >
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -219,7 +226,19 @@ export const FormsList = ({
               </div>
             </CardContent>
             <CardFooter className="gap-2 flex-wrap">
-              {!isFieldUser() && (
+              {/* Primary submit button for field users */}
+              {isFieldUser() ? (
+                <Button 
+                  className="w-full" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/form/${form.id}/submit`);
+                  }}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Start New Submission
+                </Button>
+              ) : (
                 <Button variant="outline" size="sm" onClick={(e) => {
                   e.stopPropagation();
                   navigate(`/form/${form.id}/submit`);
@@ -228,13 +247,15 @@ export const FormsList = ({
                   Submit
                 </Button>
               )}
-              <Button variant="outline" size="sm" onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/form/${form.id}/map`);
-              }}>
-                <Map className="w-3 h-3 mr-1" />
-                View Map
-              </Button>
+              {!isFieldUser() && (
+                <Button variant="outline" size="sm" onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/form/${form.id}/map`);
+                }}>
+                  <Map className="w-3 h-3 mr-1" />
+                  View Map
+                </Button>
+              )}
               {canAssignForms() && (
                 <>
                   <Button variant="outline" size="sm" onClick={(e) => {
