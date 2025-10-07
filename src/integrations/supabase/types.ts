@@ -338,6 +338,72 @@ export type Database = {
           },
         ]
       }
+      invoices: {
+        Row: {
+          amount: number
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          due_date: string
+          id: string
+          invoice_number: string
+          line_items: Json
+          notes: string | null
+          organisation_id: string
+          paid_date: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          due_date: string
+          id?: string
+          invoice_number: string
+          line_items?: Json
+          notes?: string | null
+          organisation_id: string
+          paid_date?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          due_date?: string
+          id?: string
+          invoice_number?: string
+          line_items?: Json
+          notes?: string | null
+          organisation_id?: string
+          paid_date?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       maps: {
         Row: {
           config: Json
@@ -389,6 +455,57 @@ export type Database = {
           },
         ]
       }
+      organisation_requests: {
+        Row: {
+          created_at: string | null
+          id: string
+          notes: string | null
+          organisation_name: string
+          phone_number: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          organisation_name: string
+          phone_number: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          organisation_name?: string
+          phone_number?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organisation_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organisation_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organisation_subscriptions: {
         Row: {
           active: boolean | null
@@ -432,6 +549,7 @@ export type Database = {
           name: string
           slug: string | null
           staff_count: number | null
+          status: string | null
           subscription_tier: string | null
           updated_at: string | null
         }
@@ -445,6 +563,7 @@ export type Database = {
           name: string
           slug?: string | null
           staff_count?: number | null
+          status?: string | null
           subscription_tier?: string | null
           updated_at?: string | null
         }
@@ -458,7 +577,99 @@ export type Database = {
           name?: string
           slug?: string | null
           staff_count?: number | null
+          status?: string | null
           subscription_tier?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          id: string
+          invoice_id: string | null
+          notes: string | null
+          organisation_id: string
+          payment_date: string
+          payment_method: string | null
+          payment_reference: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          organisation_id: string
+          payment_date?: string
+          payment_method?: string | null
+          payment_reference?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          organisation_id?: string
+          payment_date?: string
+          payment_method?: string | null
+          payment_reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_pricing: {
+        Row: {
+          created_at: string | null
+          currency: string | null
+          id: string
+          price_per_month: number
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          price_per_month: number
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          price_per_month?: number
+          role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string | null
         }
         Relationships: []
@@ -987,6 +1198,10 @@ export type Database = {
       equals: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
+      }
+      generate_invoice_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       generate_org_slug: {
         Args: { org_id: string; org_name: string }
