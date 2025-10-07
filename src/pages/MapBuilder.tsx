@@ -20,6 +20,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SymbolType, SymbolSize } from "@/lib/mapSymbols";
+import { Switch } from "@/components/ui/switch";
 
 interface StyleRule {
   field: string;
@@ -113,6 +114,10 @@ const MapBuilder = () => {
       setDescription(data.description || "");
       
       const config = (data.config || {}) as any;
+      
+      // Load clustering setting
+      setEnableClustering(config.enableClustering !== false);
+      
       if (config.basemap) {
         const basemap = BASEMAPS.find(b => b.id === config.basemap);
         if (basemap) setSelectedBasemap(basemap);
@@ -140,7 +145,7 @@ const MapBuilder = () => {
               color: layer.color || "#3b82f6",
               symbolType: layer.symbolType || 'circle',
               symbolSize: layer.symbolSize || 'medium',
-              styleRule: layer.styleRule,
+              styleRule: layer.styleRule || undefined,
               responses: responses || [],
             };
           })
@@ -442,6 +447,20 @@ const MapBuilder = () => {
                       onChange={(e) => setDescription(e.target.value)}
                       placeholder="Enter map description"
                       rows={3}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 rounded-lg border bg-card">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="clustering" className="text-base">Point Clustering</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Group nearby points automatically
+                      </p>
+                    </div>
+                    <Switch
+                      id="clustering"
+                      checked={enableClustering}
+                      onCheckedChange={setEnableClustering}
                     />
                   </div>
 

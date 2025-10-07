@@ -306,6 +306,9 @@ export const MapLayerPanel = ({
         <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto z-[10000]">
           <DialogHeader>
             <DialogTitle>Attribute-Based Styling</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Color markers based on field values from your form data
+            </p>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">

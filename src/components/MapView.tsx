@@ -1,8 +1,6 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet.markercluster';
-import 'leaflet.markercluster/dist/MarkerCluster.css';
-import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { createCustomIcon, SymbolType, SymbolSize } from '@/lib/mapSymbols';
 
 interface StyleRule {
@@ -86,18 +84,6 @@ const MapView = ({ responses = [], basemapUrl, basemapAttribution, enableCluster
         });
 
         new ResetControl().addTo(mapRef.current);
-
-        // Initialize marker layer (clustered or regular)
-        if (enableClustering) {
-          markersLayerRef.current = (L as any).markerClusterGroup({
-            maxClusterRadius: 50,
-            spiderfyOnMaxZoom: true,
-            showCoverageOnHover: true,
-            zoomToBoundsOnClick: true,
-          }).addTo(mapRef.current);
-        } else {
-          markersLayerRef.current = L.layerGroup().addTo(mapRef.current);
-        }
       }
     } catch (err) {
       console.error('Error initializing Leaflet map:', err);
@@ -138,6 +124,33 @@ const MapView = ({ responses = [], basemapUrl, basemapAttribution, enableCluster
       console.error('Error updating basemap:', err);
     }
   }, [basemapUrl, basemapAttribution]);
+
+  // Reinitialize markers layer when clustering changes
+  useEffect(() => {
+    try {
+      const map = mapRef.current;
+      if (!map) return;
+
+      // Remove old layer
+      if (markersLayerRef.current) {
+        map.removeLayer(markersLayerRef.current);
+      }
+
+      // Create new layer based on clustering setting
+      if (enableClustering) {
+        markersLayerRef.current = (L as any).markerClusterGroup({
+          maxClusterRadius: 50,
+          spiderfyOnMaxZoom: true,
+          showCoverageOnHover: true,
+          zoomToBoundsOnClick: true,
+        }).addTo(map);
+      } else {
+        markersLayerRef.current = L.layerGroup().addTo(map);
+      }
+    } catch (err) {
+      console.error('Error reinitializing markers layer:', err);
+    }
+  }, [enableClustering]);
 
   // Update markers when responses change
   useEffect(() => {
