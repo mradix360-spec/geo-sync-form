@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as bcrypt from "https://esm.sh/bcryptjs@2.4.3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -58,8 +57,14 @@ serve(async (req) => {
       orgId = orgData.id;
     }
 
-    // Hash password
-    const passwordHash = bcrypt.hashSync(password, 10);
+    // Hash password using database function
+    const { data: passwordHash, error: hashError } = await supabaseClient
+      .rpc('hash_password', { plain_password: password });
+
+    if (hashError || !passwordHash) {
+      console.error('Password hashing error:', hashError);
+      throw new Error('Failed to hash password');
+    }
 
     // Create user
     const { data: userData, error: userError } = await supabaseClient
