@@ -10,8 +10,21 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
+    persistSession: false, // We manage sessions ourselves
+    autoRefreshToken: false,
+  },
+  global: {
+    headers: {}
   }
 });
+
+// Function to update Supabase client with custom JWT
+export const setSupabaseAuth = (token: string | null) => {
+  if (token) {
+    supabase.realtime.setAuth(token);
+    // Set the Authorization header for all requests
+    (supabase as any).rest.headers['Authorization'] = `Bearer ${token}`;
+  } else {
+    delete (supabase as any).rest.headers['Authorization'];
+  }
+};

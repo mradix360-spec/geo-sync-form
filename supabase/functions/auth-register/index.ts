@@ -115,11 +115,17 @@ serve(async (req) => {
     expiresAt.setDate(expiresAt.getDate() + 7);
 
     const token = await new SignJWT({
-      userId: userData.id,
+      sub: userData.id, // Supabase expects 'sub' for user ID
       email: userData.email,
+      role: 'authenticated',
+      user_metadata: {
+        full_name: userData.full_name,
+        organisation_id: userData.organisation_id
+      }
     })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
+      .setAudience('authenticated')
       .setExpirationTime(Math.floor(expiresAt.getTime() / 1000))
       .setJti(crypto.randomUUID())
       .sign(new TextEncoder().encode(JWT_SECRET));

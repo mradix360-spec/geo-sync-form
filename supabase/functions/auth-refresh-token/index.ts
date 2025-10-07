@@ -62,16 +62,19 @@ serve(async (req) => {
       .delete()
       .eq('token', token);
 
-    // Generate new token
+    // Generate new token with Supabase-compatible claims
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
 
     const newToken = await new SignJWT({
-      userId: payload.userId,
-      email: payload.email,
+      sub: String(payload.sub || payload.userId || sessionData.user_id), // Support both claim formats
+      email: String(payload.email || ''),
+      role: 'authenticated',
+      user_metadata: payload.user_metadata || {}
     })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
+      .setAudience('authenticated')
       .setExpirationTime(Math.floor(expiresAt.getTime() / 1000))
       .setJti(crypto.randomUUID())
       .sign(new TextEncoder().encode(JWT_SECRET));

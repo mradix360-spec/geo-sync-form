@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, setSupabaseAuth } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 interface User {
@@ -35,6 +35,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
 
       if (!token || !expiry) {
+        setSupabaseAuth(null);
         setLoading(false);
         return;
       }
@@ -43,9 +44,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (new Date(expiry) < new Date()) {
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(TOKEN_EXPIRY_KEY);
+        setSupabaseAuth(null);
         setLoading(false);
         return;
       }
+
+      // Set the custom JWT in Supabase client
+      setSupabaseAuth(token);
 
       // Verify token with backend
       try {
@@ -56,6 +61,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (error || !data.valid) {
           localStorage.removeItem(TOKEN_KEY);
           localStorage.removeItem(TOKEN_EXPIRY_KEY);
+          setSupabaseAuth(null);
           setUser(null);
         } else {
           setUser(data.user);
@@ -64,6 +70,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error('Session verification error:', error);
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(TOKEN_EXPIRY_KEY);
+        setSupabaseAuth(null);
         setUser(null);
       }
 
@@ -85,6 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (!error && data.success) {
           localStorage.setItem(TOKEN_KEY, data.token);
           localStorage.setItem(TOKEN_EXPIRY_KEY, data.expiresAt);
+          setSupabaseAuth(data.token);
         }
       } catch (error) {
         console.error('Token refresh error:', error);
@@ -112,6 +120,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Store token and expiry
       localStorage.setItem(TOKEN_KEY, data.token);
       localStorage.setItem(TOKEN_EXPIRY_KEY, data.expiresAt);
+      setSupabaseAuth(data.token);
       
       setUser(data.user);
       
@@ -143,6 +152,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Store token and expiry (auto-login after registration)
       localStorage.setItem(TOKEN_KEY, data.token);
       localStorage.setItem(TOKEN_EXPIRY_KEY, data.expiresAt);
+      setSupabaseAuth(data.token);
       
       setUser(data.user);
       
@@ -171,6 +181,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(TOKEN_EXPIRY_KEY);
+    setSupabaseAuth(null);
     setUser(null);
     
     toast({

@@ -74,16 +74,22 @@ serve(async (req) => {
 
     const roles = rolesData?.map(r => r.role) || [];
 
-    // Generate custom JWT token
+    // Generate custom JWT token with proper Supabase-compatible claims
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
 
     const token = await new SignJWT({
-      userId: userData.id,
+      sub: userData.id, // Supabase expects 'sub' for user ID
       email: userData.email,
+      role: 'authenticated',
+      user_metadata: {
+        full_name: userData.full_name,
+        organisation_id: userData.organisation_id
+      }
     })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
+      .setAudience('authenticated')
       .setExpirationTime(Math.floor(expiresAt.getTime() / 1000))
       .setJti(crypto.randomUUID())
       .sign(new TextEncoder().encode(JWT_SECRET));
