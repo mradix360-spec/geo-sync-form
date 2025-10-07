@@ -7,10 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, MapPin, Save, Upload, X } from "lucide-react";
+import { ArrowLeft, MapPin, Save, Upload, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { offlineStorage } from "@/lib/offlineStorage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 
 interface ValidationRule {
   type: 'min' | 'max' | 'pattern' | 'minLength' | 'maxLength';
@@ -29,6 +31,14 @@ interface Calculation {
   decimals?: number;
 }
 
+interface Section {
+  id: string;
+  title: string;
+  description?: string;
+  collapsible?: boolean;
+  pageNumber?: number;
+}
+
 interface FormField {
   name: string;
   label: string;
@@ -42,6 +52,7 @@ interface FormField {
   conditionLogic?: 'AND' | 'OR';
   calculation?: Calculation;
   readonly?: boolean;
+  sectionId?: string;
 }
 
 interface Form {
@@ -49,7 +60,12 @@ interface Form {
   title: string;
   description: string;
   geometry_type: string;
-  schema: { fields: FormField[] };
+  schema: { 
+    sections?: Section[];
+    fields: FormField[];
+    multiPage?: boolean;
+    totalPages?: number;
+  };
 }
 
 const FormSubmit = () => {
@@ -66,6 +82,7 @@ const FormSubmit = () => {
   const [uploadingFiles, setUploadingFiles] = useState<Record<string, boolean>>({});
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [visibleFields, setVisibleFields] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState<string>('');
 
@@ -416,6 +433,61 @@ const FormSubmit = () => {
     }
   };
 
+  const validatePage = (): boolean => {
+    const errors: Record<string, string> = {};
+    const currentPageSections = form!.schema.sections?.filter(s => (s.pageNumber || 1) === currentPage) || [];
+    const currentPageSectionIds = currentPageSections.map(s => s.id);
+    
+    form!.schema.fields
+      .filter(field => 
+        visibleFields.has(field.name) && 
+        field.required &&
+        (!field.sectionId || currentPageSectionIds.includes(field.sectionId))
+      )
+      .forEach(field => {
+        const value = formData[field.name];
+        if (!value || value === '') {
+          errors[field.name] = 'This field is required';
+        } else {
+          const error = validateField(field, value);
+          if (error) {
+            errors[field.name] = error;
+          }
+        }
+      });
+
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return false;
+    }
+    return true;
+  };
+
+  const handleNextPage = () => {
+    if (!form) return;
+    
+    if (!validatePage()) {
+      toast({
+        variant: "destructive",
+        title: "Please complete all required fields",
+        description: "Fill in all required fields before proceeding",
+      });
+      return;
+    }
+
+    if (currentPage < (form.schema.totalPages || 1)) {
+      setCurrentPage(currentPage + 1);
+      window.scrollTo(0, 0);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+      window.scrollTo(0, 0);
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
@@ -423,6 +495,12 @@ const FormSubmit = () => {
   if (!form) {
     return <div className="flex items-center justify-center min-h-screen">Form not found</div>;
   }
+
+  const isMultiPage = form.schema.multiPage && (form.schema.totalPages || 1) > 1;
+  const totalPages = form.schema.totalPages || 1;
+  const sections = form.schema.sections || [{ id: 'default', title: 'Form', pageNumber: 1 }];
+  const currentPageSections = sections.filter(s => (s.pageNumber || 1) === currentPage);
+  const progressPercent = isMultiPage ? ((currentPage - 1) / (totalPages - 1)) * 100 : 100;
 
   return (
     <div className="min-h-screen bg-background">
@@ -440,6 +518,16 @@ const FormSubmit = () => {
           <CardHeader>
             <CardTitle>{form.title}</CardTitle>
             <CardDescription>{form.description}</CardDescription>
+            
+            {isMultiPage && (
+              <div className="space-y-2 pt-4">
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Step {currentPage} of {totalPages}</span>
+                  <span>{Math.round(progressPercent)}% Complete</span>
+                </div>
+                <Progress value={progressPercent} className="h-2" />
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -457,10 +545,29 @@ const FormSubmit = () => {
                 )}
               </div>
 
-              {/* Dynamic Fields */}
-              {form.schema.fields
-                .filter(field => visibleFields.has(field.name))
-                .map((field) => (
+              {/* Sections */}
+              {currentPageSections.map((section, sectionIdx) => {
+                const sectionFields = form.schema.fields
+                  .filter(field => 
+                    visibleFields.has(field.name) && 
+                    field.sectionId === section.id
+                  );
+
+                if (sectionFields.length === 0) return null;
+
+                return (
+                  <div key={section.id} className="space-y-4">
+                    {sectionIdx > 0 && <Separator className="my-6" />}
+                    
+                    <div>
+                      <h3 className="text-lg font-semibold">{section.title}</h3>
+                      {section.description && (
+                        <p className="text-sm text-muted-foreground mt-1">{section.description}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-4">
+                      {sectionFields.map((field) => (
                 <div key={field.name} className="space-y-2">
                   <Label htmlFor={field.name}>
                     {field.label} {field.required && visibleFields.has(field.name) && '*'}
@@ -598,11 +705,47 @@ const FormSubmit = () => {
                   )}
                 </div>
               ))}
+                    </div>
+                  </div>
+                );
+              })}
 
-              <Button type="submit" disabled={submitting || !location} className="w-full">
-                <Save className="w-4 h-4 mr-2" />
-                {submitting ? 'Submitting...' : 'Submit Form'}
-              </Button>
+              {/* Navigation Buttons */}
+              <div className="flex items-center justify-between pt-4">
+                {isMultiPage ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handlePrevPage}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="w-4 h-4 mr-2" />
+                      Previous
+                    </Button>
+
+                    {currentPage < totalPages ? (
+                      <Button
+                        type="button"
+                        onClick={handleNextPage}
+                      >
+                        Next
+                        <ChevronRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    ) : (
+                      <Button type="submit" disabled={submitting || !location}>
+                        <Save className="w-4 h-4 mr-2" />
+                        {submitting ? 'Submitting...' : 'Submit Form'}
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <Button type="submit" disabled={submitting || !location} className="w-full">
+                    <Save className="w-4 h-4 mr-2" />
+                    {submitting ? 'Submitting...' : 'Submit Form'}
+                  </Button>
+                )}
+              </div>
             </form>
           </CardContent>
         </Card>
