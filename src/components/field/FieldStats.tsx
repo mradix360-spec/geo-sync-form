@@ -77,20 +77,6 @@ export const FieldStats = () => {
     },
   ];
 
-  if (loading) {
-    return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="animate-pulse border-0 shadow-[var(--shadow-card)]">
-            <CardContent className="pt-6">
-              <div className="h-16 bg-muted/50 rounded-lg" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  }
-
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       {statCards.map((stat, index) => {
