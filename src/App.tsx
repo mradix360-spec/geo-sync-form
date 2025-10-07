@@ -34,6 +34,7 @@ import FieldProfile from "./pages/field/FieldProfile";
 import FormBuilder from "./pages/FormBuilder";
 import FormSubmit from "./pages/FormSubmit";
 import MapViewer from "./pages/MapViewer";
+import MapBuilder from "./pages/MapBuilder";
 
 // Layouts
 import AnalystLayout from "./components/layouts/AnalystLayout";
@@ -108,6 +109,14 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <MapViewer />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/map-builder/:mapId?" 
+                    element={
+                      <ProtectedRoute>
+                        <MapBuilder />
                       </ProtectedRoute>
                     } 
                   />

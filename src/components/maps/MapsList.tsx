@@ -122,7 +122,7 @@ export const MapsList = ({ showHeader = true }: MapsListProps) => {
           <Card
             key={map.id}
             className="hover:shadow-lg transition-all cursor-pointer"
-            onClick={() => navigate(`/map/${map.id}`)}
+            onClick={() => navigate(`/map-builder/${map.id}`)}
           >
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -145,11 +145,11 @@ export const MapsList = ({ showHeader = true }: MapsListProps) => {
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate(`/map/${map.id}`);
+                  navigate(`/map-builder/${map.id}`);
                 }}
               >
                 <Eye className="w-3 h-3 mr-1" />
-                View
+                Edit
               </Button>
               <Button
                 variant="outline"
@@ -182,6 +182,7 @@ export const MapsList = ({ showHeader = true }: MapsListProps) => {
       {showShareDialog && shareMapId && (
         <SharePermissionDialog
           formId={shareMapId}
+          objectType="map"
           open={showShareDialog}
           onOpenChange={setShowShareDialog}
           onSuccess={() => {

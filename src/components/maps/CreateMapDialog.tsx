@@ -47,10 +47,19 @@ export const CreateMapDialog = ({
     e.preventDefault();
     if (!user) return;
 
+    if (!formData.title.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Map title is required",
+      });
+      return;
+    }
+
     try {
       setLoading(true);
 
-      // Create map with default config
+      // Create map with minimal config - will be configured in builder
       const { data: mapData, error: mapError } = await supabase
         .from("maps")
         .insert({
@@ -59,8 +68,9 @@ export const CreateMapDialog = ({
           organisation_id: user.organisation_id,
           created_by: user.id,
           config: {
-            viewport: { center: [0, 20], zoom: 3 },
+            basemap: "osm",
             layers: [],
+            viewport: { center: [0, 20], zoom: 3 },
           },
         })
         .select()
@@ -82,12 +92,15 @@ export const CreateMapDialog = ({
 
       toast({
         title: "Success",
-        description: "Map created successfully",
+        description: "Opening map builder...",
       });
 
       onSuccess?.();
       onOpenChange(false);
-      
+
+      // Navigate to map builder
+      navigate(`/map-builder/${mapData.id}`);
+
       // Reset form
       setFormData({
         title: "",
