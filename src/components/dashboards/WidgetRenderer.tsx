@@ -12,6 +12,8 @@ import { UserStatsWidget } from "./widgets/UserStatsWidget";
 import { LocationHeatmapWidget } from "./widgets/LocationHeatmapWidget";
 import { GoalTrackerWidget } from "./widgets/GoalTrackerWidget";
 import { QuickStatsWidget } from "./widgets/QuickStatsWidget";
+import { SpatialFilterWidget } from "./widgets/SpatialFilterWidget";
+import { AttributeFilterWidget } from "./widgets/AttributeFilterWidget";
 
 interface WidgetRendererProps {
   widget: {
@@ -27,6 +29,10 @@ export const WidgetRenderer = ({ widget, onUpdate }: WidgetRendererProps) => {
 
   const renderWidget = () => {
     switch (type) {
+      case "spatial-filter":
+        return <SpatialFilterWidget />;
+      case "attribute-filter":
+        return <AttributeFilterWidget />;
       case "stat-card":
         return <StatCardWidget config={config} onUpdate={onUpdate} />;
       case "bar-chart":

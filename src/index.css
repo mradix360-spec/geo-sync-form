@@ -137,3 +137,61 @@ All colors MUST be HSL.
 .custom-marker-icon:hover svg {
   transform: scale(1.15);
 }
+
+/* React Grid Layout Styles */
+.react-grid-layout {
+  position: relative;
+  transition: height 200ms ease;
+}
+
+.react-grid-item {
+  transition: all 200ms ease;
+  transition-property: left, top, width, height;
+}
+
+.react-grid-item img {
+  pointer-events: none;
+  user-select: none;
+}
+
+.react-grid-item > .react-resizable-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+}
+
+.react-grid-item > .react-resizable-handle::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 5px;
+  height: 5px;
+  border-right: 2px solid hsl(var(--primary));
+  border-bottom: 2px solid hsl(var(--primary));
+  opacity: 0.4;
+  transition: opacity 0.2s ease;
+}
+
+.react-grid-item:hover > .react-resizable-handle::after {
+  opacity: 1;
+}
+
+.react-grid-item.static {
+  background: hsl(var(--muted));
+}
+
+.react-grid-item .react-resizable-handle.react-resizable-handle-se {
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+}
+
+.react-grid-placeholder {
+  background: hsl(var(--primary) / 0.2);
+  opacity: 0.6;
+  transition-duration: 100ms;
+  z-index: 2;
+  border-radius: 0.5rem;
+  border: 2px dashed hsl(var(--primary));
+}
