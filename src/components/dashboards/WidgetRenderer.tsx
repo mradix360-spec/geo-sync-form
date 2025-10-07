@@ -65,11 +65,8 @@ export const WidgetRenderer = ({ widget, onUpdate }: WidgetRendererProps) => {
   };
 
   return (
-    <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-gradient-to-br from-card via-card to-card/50 backdrop-blur-sm overflow-hidden group relative">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/3 via-transparent to-primary/3 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      <div className="relative z-10">
-        {renderWidget()}
-      </div>
-    </Card>
+    <div className="h-full w-full">
+      {renderWidget()}
+    </div>
   );
 };
