@@ -30,10 +30,10 @@ const AnalystLayout = () => {
   };
 
   const navItems = [
-    { to: "/dashboard/forms", icon: FileText, label: "Forms" },
-    { to: "/dashboard/maps", icon: Map, label: "Maps" },
-    { to: "/dashboard/dashboards", icon: BarChart3, label: "Dashboards" },
-    { to: "/dashboard/settings", icon: Settings, label: "Settings" },
+    { to: "/analyst/forms", icon: FileText, label: "Forms" },
+    { to: "/analyst/maps", icon: Map, label: "Maps" },
+    { to: "/analyst/dashboards", icon: BarChart3, label: "Dashboards" },
+    { to: "/analyst/settings", icon: Settings, label: "Settings" },
   ];
 
   return (

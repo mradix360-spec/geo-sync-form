@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
 interface User {
   id: string;
@@ -13,30 +14,84 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
+  session: Session | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, fullName: string, orgName?: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchUserRoles = async (userId: string) => {
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
+
+    const { data: userData } = await supabase
+      .from('users')
+      .select('full_name, organisation_id')
+      .eq('id', userId)
+      .single();
+
+    return {
+      roles: roles?.map(r => r.role) || [],
+      full_name: userData?.full_name,
+      organisation_id: userData?.organisation_id
+    };
+  };
+
   useEffect(() => {
-    // Check for stored token on mount
-    const storedToken = localStorage.getItem('auth_token');
-    const storedUser = localStorage.getItem('auth_user');
-    
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        
+        if (session?.user) {
+          // Defer additional Supabase calls with setTimeout to avoid deadlock
+          setTimeout(async () => {
+            const userDetails = await fetchUserRoles(session.user.id);
+            setUser({
+              id: session.user.id,
+              email: session.user.email!,
+              roles: userDetails.roles,
+              full_name: userDetails.full_name,
+              organisation_id: userDetails.organisation_id
+            });
+          }, 0);
+        } else {
+          setUser(null);
+        }
+        
+        setLoading(false);
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user) {
+        setTimeout(async () => {
+          const userDetails = await fetchUserRoles(session.user.id);
+          setUser({
+            id: session.user.id,
+            email: session.user.email!,
+            roles: userDetails.roles,
+            full_name: userDetails.full_name,
+            organisation_id: userDetails.organisation_id
+          });
+        }, 0);
+      }
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -45,7 +100,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         body: { email, password }
       });
 
-      if (error || !data?.token) {
+      if (error || !data?.success) {
         toast({
           variant: "destructive",
           title: "Login failed",
@@ -54,25 +109,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(data?.error || 'Invalid credentials');
       }
 
-      // Fetch user roles after login
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', data.user.id);
-
-      const userWithRoles = {
-        ...data.user,
-        roles: roles?.map(r => r.role) || []
-      };
-
-      localStorage.setItem('auth_token', data.token);
-      localStorage.setItem('auth_user', JSON.stringify(userWithRoles));
-      setToken(data.token);
-      setUser(userWithRoles);
-
       toast({
         title: "Welcome back!",
-        description: `Logged in as ${data.user.email}`,
+        description: `Logged in as ${email}`,
       });
     } catch (error) {
       console.error('Login error:', error);
@@ -86,7 +125,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         body: { email, password, fullName, orgName }
       });
 
-      if (error || !data?.token) {
+      if (error || !data?.success) {
         toast({
           variant: "destructive",
           title: "Registration failed",
@@ -94,11 +133,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
         throw new Error(data?.error || 'Registration failed');
       }
-
-      localStorage.setItem('auth_token', data.token);
-      localStorage.setItem('auth_user', JSON.stringify(data.user));
-      setToken(data.token);
-      setUser(data.user);
 
       toast({
         title: "Account created!",
@@ -110,11 +144,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-    setToken(null);
-    setUser(null);
+  const logout = async () => {
+    await supabase.auth.signOut();
     toast({
       title: "Logged out",
       description: "You have been logged out successfully",
@@ -122,7 +153,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, session, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
