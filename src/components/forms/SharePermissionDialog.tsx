@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { Lock, Users, Building2, Globe, UserPlus, Copy, Check, Code } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SharePermissionDialogProps {
   formId: string;
@@ -33,6 +34,7 @@ export const SharePermissionDialog = ({
   onOpenChange,
   onSuccess,
 }: SharePermissionDialogProps) => {
+  const { user } = useAuth();
   const [shareType, setShareType] = useState(currentShareType);
   const [loading, setLoading] = useState(false);
   const [shareToken, setShareToken] = useState<string | null>(null);
@@ -100,14 +102,8 @@ export const SharePermissionDialog = ({
     try {
       setLoading(true);
 
-      // Get current user's organisation
-      const { data: userData } = await supabase
-        .from('users')
-        .select('organisation_id')
-        .eq('id', (await supabase.auth.getUser()).data.user?.id)
-        .single();
-
-      if (!userData?.organisation_id) {
+      // Get current user's organisation from AuthContext
+      if (!user?.organisation_id) {
         throw new Error('User organisation not found');
       }
 
@@ -124,7 +120,7 @@ export const SharePermissionDialog = ({
           .from('shares')
           .update({
             access_type: shareType,
-            organisation_id: userData.organisation_id,
+            organisation_id: user.organisation_id,
           })
           .eq('id', existingShare.id);
 
@@ -137,7 +133,7 @@ export const SharePermissionDialog = ({
             object_id: formId,
             object_type: objectType,
             access_type: shareType,
-            organisation_id: userData.organisation_id,
+            organisation_id: user.organisation_id,
           });
 
         if (error) throw error;

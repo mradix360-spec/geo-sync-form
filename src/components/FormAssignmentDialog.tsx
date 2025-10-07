@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,7 @@ export const FormAssignmentDialog = ({
   onOpenChange,
   onAssignmentComplete
 }: FormAssignmentDialogProps) => {
+  const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [assignedUsers, setAssignedUsers] = useState<Set<string>>(new Set());
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
@@ -53,20 +55,13 @@ export const FormAssignmentDialog = ({
   const loadUsers = async () => {
     setLoading(true);
     try {
-      // Get all users in the organization
-      const { data: currentUser } = await supabase.auth.getUser();
-      if (!currentUser.user) return;
-
-      const { data: currentUserData } = await supabase
-        .from('users')
-        .select('organisation_id')
-        .eq('id', currentUser.user.id)
-        .single();
+      // Get all users in the organization from AuthContext
+      if (!user?.organisation_id) return;
 
       const { data: orgUsers, error } = await supabase
         .from('users')
         .select('id, email, full_name')
-        .eq('organisation_id', currentUserData?.organisation_id);
+        .eq('organisation_id', user.organisation_id);
 
       if (error) throw error;
 
