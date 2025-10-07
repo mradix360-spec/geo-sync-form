@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
+import * as bcrypt from "https://esm.sh/bcryptjs@2.4.3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,7 +22,7 @@ serve(async (req) => {
     }
 
     // Verify password against hash
-    const isValid = await bcrypt.compare(password, hash);
+    const isValid = bcrypt.compareSync(password, hash);
 
     return new Response(
       JSON.stringify({ valid: isValid }),

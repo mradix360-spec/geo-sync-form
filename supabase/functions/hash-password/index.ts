@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
+import * as bcrypt from "https://esm.sh/bcryptjs@2.4.3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,7 +22,7 @@ serve(async (req) => {
     }
 
     // Generate bcrypt hash with salt rounds of 10
-    const hash = await bcrypt.hash(password);
+    const hash = bcrypt.hashSync(password, 10);
 
     return new Response(
       JSON.stringify({ hash }),
