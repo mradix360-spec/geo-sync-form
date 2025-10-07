@@ -8,8 +8,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Settings } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Badge } from "@/components/ui/badge";
+
+interface ValidationRule {
+  type: 'min' | 'max' | 'pattern' | 'minLength' | 'maxLength';
+  value: string | number;
+  message?: string;
+}
 
 interface FormField {
   id: string;
@@ -17,6 +25,10 @@ interface FormField {
   label: string;
   type: string;
   required: boolean;
+  validation?: ValidationRule[];
+  options?: string[]; // For select fields
+  accept?: string; // For file fields
+  maxSize?: number; // For file fields in MB
 }
 
 const FormBuilder = () => {
@@ -204,11 +216,171 @@ const FormBuilder = () => {
                               <SelectItem value="text">Text</SelectItem>
                               <SelectItem value="number">Number</SelectItem>
                               <SelectItem value="date">Date</SelectItem>
+                              <SelectItem value="email">Email</SelectItem>
+                              <SelectItem value="tel">Phone</SelectItem>
+                              <SelectItem value="url">URL</SelectItem>
                               <SelectItem value="select">Select</SelectItem>
                               <SelectItem value="textarea">Text Area</SelectItem>
+                              <SelectItem value="file">File Upload</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
+                        
+                        {/* Select Options */}
+                        {field.type === 'select' && (
+                          <div className="col-span-2 space-y-2">
+                            <Label>Options (comma-separated)</Label>
+                            <Input
+                              value={field.options?.join(', ') || ''}
+                              onChange={(e) => updateField(field.id, { 
+                                options: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                              })}
+                              placeholder="e.g., Option 1, Option 2, Option 3"
+                            />
+                          </div>
+                        )}
+
+                        {/* File Upload Settings */}
+                        {field.type === 'file' && (
+                          <div className="col-span-2 grid gap-4 md:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label>Accepted File Types</Label>
+                              <Select
+                                value={field.accept || 'image/*'}
+                                onValueChange={(value) => updateField(field.id, { accept: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="image/*">Images Only</SelectItem>
+                                  <SelectItem value=".pdf">PDF Only</SelectItem>
+                                  <SelectItem value=".doc,.docx">Documents</SelectItem>
+                                  <SelectItem value="*">All Files</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Max File Size (MB)</Label>
+                              <Input
+                                type="number"
+                                min="1"
+                                max="10"
+                                value={field.maxSize || 5}
+                                onChange={(e) => updateField(field.id, { maxSize: parseInt(e.target.value) })}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Validation Rules */}
+                        <div className="col-span-2">
+                          <Collapsible>
+                            <CollapsibleTrigger asChild>
+                              <Button variant="ghost" size="sm" className="w-full justify-between">
+                                <span className="flex items-center gap-2">
+                                  <Settings className="w-4 h-4" />
+                                  Validation Rules
+                                  {field.validation && field.validation.length > 0 && (
+                                    <Badge variant="secondary">{field.validation.length}</Badge>
+                                  )}
+                                </span>
+                              </Button>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="pt-4 space-y-3">
+                              {/* Number validations */}
+                              {(field.type === 'number') && (
+                                <div className="grid gap-3 md:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <Label>Minimum Value</Label>
+                                    <Input
+                                      type="number"
+                                      placeholder="No minimum"
+                                      value={field.validation?.find(v => v.type === 'min')?.value || ''}
+                                      onChange={(e) => {
+                                        const newValidation = [...(field.validation || [])].filter(v => v.type !== 'min');
+                                        if (e.target.value) {
+                                          newValidation.push({ type: 'min', value: parseFloat(e.target.value) });
+                                        }
+                                        updateField(field.id, { validation: newValidation });
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Maximum Value</Label>
+                                    <Input
+                                      type="number"
+                                      placeholder="No maximum"
+                                      value={field.validation?.find(v => v.type === 'max')?.value || ''}
+                                      onChange={(e) => {
+                                        const newValidation = [...(field.validation || [])].filter(v => v.type !== 'max');
+                                        if (e.target.value) {
+                                          newValidation.push({ type: 'max', value: parseFloat(e.target.value) });
+                                        }
+                                        updateField(field.id, { validation: newValidation });
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Text validations */}
+                              {(field.type === 'text' || field.type === 'textarea') && (
+                                <>
+                                  <div className="grid gap-3 md:grid-cols-2">
+                                    <div className="space-y-2">
+                                      <Label>Min Length</Label>
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        placeholder="No minimum"
+                                        value={field.validation?.find(v => v.type === 'minLength')?.value || ''}
+                                        onChange={(e) => {
+                                          const newValidation = [...(field.validation || [])].filter(v => v.type !== 'minLength');
+                                          if (e.target.value) {
+                                            newValidation.push({ type: 'minLength', value: parseInt(e.target.value) });
+                                          }
+                                          updateField(field.id, { validation: newValidation });
+                                        }}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label>Max Length</Label>
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        placeholder="No maximum"
+                                        value={field.validation?.find(v => v.type === 'maxLength')?.value || ''}
+                                        onChange={(e) => {
+                                          const newValidation = [...(field.validation || [])].filter(v => v.type !== 'maxLength');
+                                          if (e.target.value) {
+                                            newValidation.push({ type: 'maxLength', value: parseInt(e.target.value) });
+                                          }
+                                          updateField(field.id, { validation: newValidation });
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Pattern (RegEx)</Label>
+                                    <Input
+                                      placeholder="e.g., ^[A-Z]{3}-\d{4}$"
+                                      value={field.validation?.find(v => v.type === 'pattern')?.value || ''}
+                                      onChange={(e) => {
+                                        const newValidation = [...(field.validation || [])].filter(v => v.type !== 'pattern');
+                                        if (e.target.value) {
+                                          newValidation.push({ type: 'pattern', value: e.target.value });
+                                        }
+                                        updateField(field.id, { validation: newValidation });
+                                      }}
+                                    />
+                                  </div>
+                                </>
+                              )}
+                            </CollapsibleContent>
+                          </Collapsible>
+                        </div>
+
                         <div className="flex items-center justify-between col-span-2">
                           <label className="flex items-center gap-2 text-sm">
                             <input
