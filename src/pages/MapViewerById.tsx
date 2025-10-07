@@ -72,6 +72,7 @@ const MapViewerById = () => {
   const [mapConfig, setMapConfig] = useState<MapConfig | null>(null);
   const [responses, setResponses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [visibleLayers, setVisibleLayers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!id) {
@@ -113,9 +114,15 @@ const MapViewerById = () => {
         },
       });
 
-      // Load responses for all visible layers
-      const visibleLayers = config.layers?.filter((l: any) => l.visible) || [];
-      const formIds = visibleLayers.map((l: any) => l.formId);
+      // Initialize visible layers from config
+      const initialVisible = new Set<string>(
+        config.layers?.filter((l: any) => l.visible).map((l: any) => l.id as string) || []
+      );
+      setVisibleLayers(initialVisible);
+
+      // Load responses for all layers
+      const allLayers = config.layers || [];
+      const formIds = allLayers.map((l: any) => l.formId);
 
       if (formIds.length > 0) {
         const { data: responseData, error: responseError } = await supabase
@@ -127,12 +134,13 @@ const MapViewerById = () => {
         
         // Map responses with their layer configuration
         const mappedResponses = (responseData || []).map((r: any) => {
-          const layer = visibleLayers.find((l: any) => l.formId === r.form_id);
+          const layer = allLayers.find((l: any) => l.formId === r.form_id);
           return {
             geojson: r.geojson,
             symbolType: layer?.symbolType || 'circle' as SymbolType,
             symbolSize: layer?.symbolSize || 'medium' as SymbolSize,
             color: layer?.color || '#3b82f6',
+            layerId: layer?.id,
           };
         });
         
@@ -149,6 +157,23 @@ const MapViewerById = () => {
       setLoading(false);
     }
   };
+
+  const handleToggleLayer = (layerId: string) => {
+    setVisibleLayers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(layerId)) {
+        newSet.delete(layerId);
+      } else {
+        newSet.add(layerId);
+      }
+      return newSet;
+    });
+  };
+
+  // Filter responses by visible layers
+  const visibleResponses = responses.filter(r => 
+    r.layerId && visibleLayers.has(r.layerId)
+  );
 
   if (loading) {
     return (
@@ -215,15 +240,16 @@ const MapViewerById = () => {
       
       <div className="flex-1">
         <MapView
-          responses={responses}
+          responses={visibleResponses}
           basemapUrl={mapConfig.config.basemap.url}
           basemapAttribution={mapConfig.config.basemap.attribution}
           layers={mapConfig.config.layers?.map(l => ({
             id: l.id,
             formTitle: l.name,
-            visible: l.visible,
+            visible: visibleLayers.has(l.id),
             color: l.color,
           })) || []}
+          onToggleLayer={handleToggleLayer}
           showControls={true}
         />
       </div>
