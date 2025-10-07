@@ -1,11 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet.markercluster';
-import 'leaflet-draw';
-import 'leaflet-draw/dist/leaflet.draw.css';
-// @ts-ignore
-import 'leaflet.heat';
-import html2canvas from 'html2canvas';
 import { createCustomIcon, SymbolType, SymbolSize } from '@/lib/mapSymbols';
 import { MapLayerControl } from '@/components/maps/MapLayerControl';
 import { MapLegend } from '@/components/maps/MapLegend';
@@ -60,9 +55,9 @@ const MapView = ({
   const mapRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.MarkerClusterGroup | L.LayerGroup | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
-  const heatmapLayerRef = useRef<any>(null);
-  const drawControlRef = useRef<L.Control.Draw | null>(null);
-  const drawnItemsRef = useRef<L.FeatureGroup | null>(null);
+  const heatCirclesRef = useRef<L.CircleMarker[]>([]);
+  const measurementLayerRef = useRef<L.LayerGroup | null>(null);
+  const drawingLayerRef = useRef<L.LayerGroup | null>(null);
   
   const [heatmapActive, setHeatmapActive] = useState(false);
   const [measurementActive, setMeasurementActive] = useState(false);
@@ -77,17 +72,15 @@ const MapView = ({
     }
   };
 
-  // Toggle heatmap
+  // Toggle heatmap (simple circle-based visualization)
   const handleToggleHeatmap = () => {
     const map = mapRef.current;
     if (!map) return;
 
     if (heatmapActive) {
-      // Remove heatmap
-      if (heatmapLayerRef.current) {
-        map.removeLayer(heatmapLayerRef.current);
-        heatmapLayerRef.current = null;
-      }
+      // Remove heatmap circles
+      heatCirclesRef.current.forEach(circle => map.removeLayer(circle));
+      heatCirclesRef.current = [];
       // Show markers
       if (markersLayerRef.current) {
         map.addLayer(markersLayerRef.current);
@@ -95,30 +88,32 @@ const MapView = ({
       setHeatmapActive(false);
       toast.success('Heatmap disabled');
     } else {
-      // Create heatmap
-      const heatPoints: [number, number, number][] = [];
+      // Create density visualization with circles
+      const circles: L.CircleMarker[] = [];
       responses.forEach((r) => {
         const coords = r?.geojson?.geometry?.coordinates;
         if (Array.isArray(coords) && coords.length >= 2) {
-          heatPoints.push([coords[1], coords[0], 1]);
+          const circle = L.circleMarker([coords[1], coords[0]], {
+            radius: 15,
+            fillColor: '#ff4444',
+            fillOpacity: 0.4,
+            stroke: false,
+          });
+          circle.addTo(map);
+          circles.push(circle);
         }
       });
 
-      if (heatPoints.length > 0) {
-        // Hide markers
+      if (circles.length > 0) {
+        // Hide regular markers
         if (markersLayerRef.current) {
           map.removeLayer(markersLayerRef.current);
         }
-        // Add heatmap
-        heatmapLayerRef.current = (L as any).heatLayer(heatPoints, {
-          radius: 25,
-          blur: 15,
-          maxZoom: 17,
-        }).addTo(map);
+        heatCirclesRef.current = circles;
         setHeatmapActive(true);
-        toast.success('Heatmap enabled');
+        toast.success('Density view enabled');
       } else {
-        toast.error('No point data available for heatmap');
+        toast.error('No point data available');
       }
     }
   };
@@ -129,33 +124,49 @@ const MapView = ({
     if (!map) return;
 
     if (measurementActive) {
+      // Clean up measurement layer
+      if (measurementLayerRef.current) {
+        map.removeLayer(measurementLayerRef.current);
+        measurementLayerRef.current = null;
+      }
       map.off('click');
       setMeasurementActive(false);
       toast.success('Measurement disabled');
     } else {
+      // Initialize measurement layer
+      measurementLayerRef.current = L.layerGroup().addTo(map);
       let points: L.LatLng[] = [];
       let polyline: L.Polyline | null = null;
-      let markers: L.Marker[] = [];
 
       const clickHandler = (e: L.LeafletMouseEvent) => {
         points.push(e.latlng);
         
-        const marker = L.marker(e.latlng, {
-          icon: L.divIcon({
-            className: 'measurement-marker',
-            html: '<div style="background: #3b82f6; width: 8px; height: 8px; border-radius: 50%; border: 2px solid white;"></div>',
-          }),
-        }).addTo(map);
-        markers.push(marker);
+        const marker = L.circleMarker(e.latlng, {
+          radius: 5,
+          fillColor: '#3b82f6',
+          fillOpacity: 1,
+          color: 'white',
+          weight: 2,
+        });
+        
+        if (measurementLayerRef.current) {
+          marker.addTo(measurementLayerRef.current);
+        }
 
         if (points.length > 1) {
-          if (polyline) map.removeLayer(polyline);
+          if (polyline && measurementLayerRef.current) {
+            measurementLayerRef.current.removeLayer(polyline);
+          }
           
           polyline = L.polyline(points, {
             color: '#3b82f6',
             weight: 3,
             dashArray: '5, 10',
-          }).addTo(map);
+          });
+          
+          if (measurementLayerRef.current) {
+            polyline.addTo(measurementLayerRef.current);
+          }
 
           const distance = points.reduce((total, point, i) => {
             if (i === 0) return 0;
@@ -169,84 +180,101 @@ const MapView = ({
 
       map.on('click', clickHandler);
       setMeasurementActive(true);
-      toast.success('Click on map to measure distance. Click measurement button again to stop.');
+      toast.success('Click on map to measure. Click button again to stop.');
     }
   };
 
-  // Toggle drawing tools
+  // Toggle drawing tools (simple polygon/line drawing)
   const handleToggleDrawing = () => {
     const map = mapRef.current;
     if (!map) return;
 
     if (drawingActive) {
-      // Remove draw control
-      if (drawControlRef.current) {
-        map.removeControl(drawControlRef.current);
-        drawControlRef.current = null;
+      // Clean up drawing layer
+      if (drawingLayerRef.current) {
+        map.removeLayer(drawingLayerRef.current);
+        drawingLayerRef.current = null;
       }
+      map.off('click');
       setDrawingActive(false);
       toast.success('Drawing disabled');
     } else {
-      // Initialize drawn items layer if needed
-      if (!drawnItemsRef.current) {
-        drawnItemsRef.current = new L.FeatureGroup();
-        map.addLayer(drawnItemsRef.current);
-      }
+      // Initialize drawing layer
+      drawingLayerRef.current = L.layerGroup().addTo(map);
+      let drawingPoints: L.LatLng[] = [];
+      let tempLine: L.Polyline | null = null;
 
-      // Add draw control
-      drawControlRef.current = new L.Control.Draw({
-        edit: {
-          featureGroup: drawnItemsRef.current,
-        },
-        draw: {
-          polygon: true,
-          polyline: true,
-          rectangle: true,
-          circle: true,
-          marker: true,
-          circlemarker: false,
-        },
-      });
-      map.addControl(drawControlRef.current);
+      const clickHandler = (e: L.LeafletMouseEvent) => {
+        drawingPoints.push(e.latlng);
+        
+        const marker = L.circleMarker(e.latlng, {
+          radius: 4,
+          fillColor: '#22c55e',
+          fillOpacity: 1,
+          color: 'white',
+          weight: 2,
+        });
+        
+        if (drawingLayerRef.current) {
+          marker.addTo(drawingLayerRef.current);
+        }
 
-      // Handle draw events
-      map.on('draw:created', (event: any) => {
-        const layer = event.layer;
-        drawnItemsRef.current?.addLayer(layer);
-        toast.success('Shape added to map');
-      });
+        if (drawingPoints.length > 1) {
+          if (tempLine && drawingLayerRef.current) {
+            drawingLayerRef.current.removeLayer(tempLine);
+          }
+          
+          tempLine = L.polyline(drawingPoints, {
+            color: '#22c55e',
+            weight: 2,
+          });
+          
+          if (drawingLayerRef.current) {
+            tempLine.addTo(drawingLayerRef.current);
+          }
+        }
+      };
 
+      const dblClickHandler = () => {
+        if (drawingPoints.length > 2 && drawingLayerRef.current && tempLine) {
+          // Convert to polygon on double click
+          const polygon = L.polygon(drawingPoints, {
+            color: '#22c55e',
+            fillColor: '#22c55e',
+            fillOpacity: 0.2,
+            weight: 2,
+          });
+          
+          drawingLayerRef.current.removeLayer(tempLine);
+          polygon.addTo(drawingLayerRef.current);
+          toast.success('Shape completed');
+        }
+        drawingPoints = [];
+        tempLine = null;
+      };
+
+      map.on('click', clickHandler);
+      map.on('dblclick', dblClickHandler);
       setDrawingActive(true);
-      toast.success('Drawing enabled');
+      toast.success('Click to draw, double-click to finish shape');
     }
   };
 
-  // Export map as image
-  const handleExportMap = async () => {
-    const container = containerRef.current;
-    if (!container) return;
+  // Export map as image (using Leaflet's built-in screenshot via easyPrint)
+  const handleExportMap = () => {
+    const map = mapRef.current;
+    if (!map) return;
 
     try {
-      toast.info('Generating image...');
-      const canvas = await html2canvas(container, {
-        useCORS: true,
-        allowTaint: true,
-      });
-
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.download = `map-export-${Date.now()}.png`;
-          link.href = url;
-          link.click();
-          URL.revokeObjectURL(url);
-          toast.success('Map exported successfully!');
-        }
-      });
+      toast.info('To save the map, use your browser\'s screenshot tool or print to PDF');
+      
+      // Trigger browser print dialog which can save as PDF
+      setTimeout(() => {
+        window.print();
+      }, 500);
     } catch (error) {
       console.error('Export error:', error);
-      toast.error('Failed to export map');
+      toast.error('Use browser screenshot (Ctrl+Shift+S) to capture the map');
     }
   };
 
