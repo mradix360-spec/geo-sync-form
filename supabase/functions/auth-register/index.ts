@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { email, password, fullName, orgName } = await req.json();
+    const { email, password, fullName, phoneNumber, orgName } = await req.json();
 
     if (!email || !password || !fullName) {
       return new Response(
@@ -40,26 +40,6 @@ serve(async (req) => {
       );
     }
 
-    let orgId: string | null = null;
-
-    // Create organization if provided, or use default
-    if (orgName) {
-      const { data: orgData, error: orgError } = await supabaseClient
-        .from('organisations')
-        .insert({ name: orgName, current_users: 1 })
-        .select()
-        .single();
-
-      if (orgError) {
-        console.error('Organization creation error:', orgError);
-        throw new Error('Failed to create organization');
-      }
-      orgId = orgData.id;
-    } else {
-      // Assign to default organization if none provided
-      orgId = '00000000-0000-0000-0000-000000000001';
-    }
-
     // Hash password using database function
     const { data: passwordHash, error: hashError } = await supabaseClient
       .rpc('hash_password', { plain_password: password });
@@ -72,7 +52,7 @@ serve(async (req) => {
     // Generate a new UUID for the user
     const userId = crypto.randomUUID();
 
-    // Insert user into custom users table
+    // Insert user into custom users table WITHOUT organization
     const { data: userData, error: userError } = await supabaseClient
       .from('users')
       .insert({
@@ -80,7 +60,7 @@ serve(async (req) => {
         email,
         password_hash: passwordHash,
         full_name: fullName,
-        organisation_id: orgId,
+        organisation_id: null,
         is_active: true,
       })
       .select()
@@ -94,29 +74,31 @@ serve(async (req) => {
       );
     }
 
-    // Assign role
-    const role = orgName ? 'org_admin' : 'field_staff';
-    const { error: roleError } = await supabaseClient
-      .from('user_roles')
-      .insert({
-        user_id: userData.id,
-        role: role,
-      });
+    // Create organization request if provided
+    if (orgName && phoneNumber) {
+      const { error: requestError } = await supabaseClient
+        .from('organisation_requests')
+        .insert({
+          user_id: userData.id,
+          organisation_name: orgName,
+          phone_number: phoneNumber,
+          status: 'pending'
+        });
 
-    if (roleError) {
-      console.error('Role assignment error:', roleError);
+      if (requestError) {
+        console.error('Organization request error:', requestError);
+      }
     }
 
     // Auto-login: create session token
     const { SignJWT } = await import("https://deno.land/x/jose@v5.2.0/index.ts");
-    // Use Supabase JWT secret so auth.uid() works in RLS policies
     const JWT_SECRET = Deno.env.get('SUPABASE_JWT_SECRET') ?? Deno.env.get('JWT_SECRET') ?? 'your-secret-key-change-in-production';
     
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
     const token = await new SignJWT({
-      sub: userData.id, // Supabase expects 'sub' for user ID
+      sub: userData.id,
       email: userData.email,
       role: 'authenticated',
       aud: 'authenticated',

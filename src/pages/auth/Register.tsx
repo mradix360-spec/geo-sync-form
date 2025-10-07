@@ -13,6 +13,7 @@ const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [orgName, setOrgName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -31,8 +32,8 @@ const Register = () => {
     setIsLoading(true);
 
     try {
-      await register(email, password, fullName, orgName || undefined);
-      // Note: redirect happens in useEffect after user state updates
+      await register(email, password, fullName, phoneNumber, orgName || undefined);
+      // Will redirect to org request page if no org assigned
     } catch (error) {
       console.error("Registration failed:", error);
     } finally {
@@ -94,13 +95,26 @@ const Register = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="orgName">Organization Name (Optional)</Label>
+              <Label htmlFor="phoneNumber">Phone Number</Label>
+              <Input
+                id="phoneNumber"
+                type="tel"
+                placeholder="+255 XXX XXX XXX"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                required
+                disabled={isLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="orgName">Organization Name</Label>
               <Input
                 id="orgName"
                 type="text"
                 placeholder="Your organization"
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
+                required
                 disabled={isLoading}
               />
             </div>

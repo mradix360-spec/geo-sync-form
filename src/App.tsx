@@ -16,6 +16,7 @@ import { RoleBasedRedirect } from "@/components/routes/RoleBasedRedirect";
 import Index from "./pages/Index";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
+import OrgRequestPending from "./pages/auth/OrgRequestPending";
 import NotFound from "./pages/NotFound";
 
 // Analyst pages
@@ -25,6 +26,7 @@ import MapsView from "./pages/analyst/MapsView";
 import DashboardsView from "./pages/analyst/DashboardsView";
 import SettingsView from "./pages/analyst/SettingsView";
 import AdminDashboard from "./pages/analyst/AdminDashboard";
+import SuperAdminDashboard from "./pages/analyst/SuperAdminDashboard";
 
 // Field staff pages
 import FieldForms from "./pages/field/FieldForms";
@@ -67,6 +69,11 @@ function App() {
                   <Route path="/" element={<Index />} />
                   <Route path="/auth/login" element={<Login />} />
                   <Route path="/auth/register" element={<Register />} />
+                  <Route path="/auth/org-request" element={
+                    <ProtectedRoute>
+                      <OrgRequestPending />
+                    </ProtectedRoute>
+                  } />
                   
                   {/* Organization landing pages */}
                   <Route path="/org/:slug" element={<OrgLandingPage />} />
@@ -96,6 +103,7 @@ function App() {
                     <Route path="dashboards" element={<DashboardsView />} />
                     <Route path="settings" element={<SettingsView />} />
                     <Route path="admin" element={<AdminDashboard />} />
+                    <Route path="superadmin" element={<SuperAdminDashboard />} />
                   </Route>
 
                   {/* Protected field staff routes */}

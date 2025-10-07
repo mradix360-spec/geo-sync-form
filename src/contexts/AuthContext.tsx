@@ -15,7 +15,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, fullName: string, orgName?: string) => Promise<void>;
+  register: (email: string, password: string, fullName: string, phoneNumber: string, orgName?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -134,10 +134,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (email: string, password: string, fullName: string, orgName?: string) => {
+  const register = async (email: string, password: string, fullName: string, phoneNumber: string, orgName?: string) => {
     try {
       const { data, error } = await supabase.functions.invoke('auth-register', {
-        body: { email, password, fullName, orgName }
+        body: { email, password, fullName, phoneNumber, orgName }
       });
 
       if (error || !data?.success) {
@@ -158,7 +158,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       toast({
         title: "Account created!",
-        description: "Welcome to GeoSync Forms",
+        description: data.user.organisation_id ? "Welcome to GeoSync Forms" : "Your organization request has been submitted",
       });
     } catch (error) {
       console.error('Registration error:', error);

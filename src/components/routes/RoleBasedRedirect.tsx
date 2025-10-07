@@ -19,6 +19,11 @@ export const RoleBasedRedirect = () => {
     return <Navigate to="/auth/login" replace />;
   }
 
+  // Redirect users without organization to request page
+  if (!user.organisation_id) {
+    return <Navigate to="/auth/org-request" replace />;
+  }
+
   // Redirect based on role
   if (isFieldUser()) {
     return <Navigate to="/field" replace />;

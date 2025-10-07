@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 
 const AnalystLayout = () => {
   const { user, logout } = useAuth();
-  const { isAnalyst, isAdmin } = useRole();
+  const { isAnalyst, isAdmin, hasRole } = useRole();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -39,6 +39,11 @@ const AnalystLayout = () => {
   // Add admin nav item only for admins
   if (isAdmin()) {
     navItems.push({ to: "/analyst/admin", icon: Shield, label: "Admin" });
+  }
+
+  // Add super admin nav item for super admins
+  if (hasRole('super_admin')) {
+    navItems.push({ to: "/analyst/superadmin", icon: Shield, label: "Super Admin" });
   }
 
   return (
