@@ -98,13 +98,13 @@ export const WidgetQuickActions = ({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-accent/80"
+          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-accent/80 shadow-sm"
         >
           <MoreVertical className="h-4 w-4" />
           <span className="sr-only">Widget actions</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="start" className="w-48 bg-popover z-50">
         {onRefresh && (
           <DropdownMenuItem onClick={handleRefresh} disabled={isRefreshing}>
             <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />

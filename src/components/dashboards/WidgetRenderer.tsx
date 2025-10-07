@@ -93,8 +93,8 @@ export const WidgetRenderer = ({ widget, onUpdate, onDelete, onDuplicate }: Widg
         {/* Subtle shine effect on hover */}
         <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-primary/5 to-transparent opacity-0 group-hover:opacity-100 translate-x-[-100%] group-hover:translate-x-[100%] transition-all duration-700" />
         
-        {/* Quick Actions Menu */}
-        <div className="absolute top-2 right-2 z-20">
+        {/* Quick Actions Menu - Positioned at top-left to avoid conflict with widget config */}
+        <div className="absolute top-2 left-2 z-20">
           <WidgetQuickActions
             widgetId={widget.id}
             widgetType={type}
@@ -115,7 +115,7 @@ export const WidgetRenderer = ({ widget, onUpdate, onDelete, onDuplicate }: Widg
 
       {/* Expanded View Dialog */}
       <Dialog open={isExpanded} onOpenChange={setIsExpanded}>
-        <DialogContent className="max-w-6xl h-[80vh]">
+        <DialogContent className="max-w-6xl h-[80vh] bg-background">
           <div className="h-full overflow-auto">
             {renderWidget()}
           </div>
