@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { WidgetRenderer } from '@/components/dashboards/WidgetRenderer';
-import { ArrowLeft, Edit } from 'lucide-react';
+import { ArrowLeft, Edit, LayoutDashboard } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
 
 interface DashboardConfig {
   title: string;
@@ -61,10 +63,27 @@ export default function DashboardViewer() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading dashboard...</p>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+        <header className="bg-card/95 backdrop-blur-sm border-b sticky top-0 z-10">
+          <div className="max-w-[1800px] mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Skeleton className="h-9 w-20" />
+                <div className="space-y-2">
+                  <Skeleton className="h-8 w-64" />
+                  <Skeleton className="h-4 w-96" />
+                </div>
+              </div>
+              <Skeleton className="h-10 w-40" />
+            </div>
+          </div>
+        </header>
+        <div className="max-w-[1800px] mx-auto p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} className="h-[300px] rounded-lg" />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -72,10 +91,15 @@ export default function DashboardViewer() {
 
   if (!dashboardConfig) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="p-6 max-w-md w-full">
-          <h2 className="text-xl font-semibold mb-2">Dashboard Not Found</h2>
-          <p className="text-muted-foreground">This dashboard is not available.</p>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
+        <Card className="p-8 max-w-md w-full">
+          <EmptyState
+            icon={LayoutDashboard}
+            title="Dashboard Not Found"
+            description="This dashboard is not available or may have been deleted."
+            actionLabel="Go Back"
+            onAction={() => navigate(-1)}
+          />
         </Card>
       </div>
     );

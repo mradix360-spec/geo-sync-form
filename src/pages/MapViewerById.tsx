@@ -2,11 +2,13 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Edit } from "lucide-react";
+import { ArrowLeft, Edit, Map as MapIcon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import MapView from "@/components/MapView";
 import { Card } from "@/components/ui/card";
 import { SymbolType, SymbolSize } from "@/lib/mapSymbols";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/shared/EmptyState";
 
 const BASEMAPS = [
   {
@@ -150,10 +152,19 @@ const MapViewerById = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading map...</p>
+      <div className="h-screen flex flex-col">
+        <header className="bg-card border-b p-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-9 w-20" />
+            <div className="space-y-2">
+              <Skeleton className="h-7 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </header>
+        <div className="flex-1 bg-muted/20 relative">
+          <Skeleton className="absolute inset-0" />
         </div>
       </div>
     );
@@ -161,10 +172,15 @@ const MapViewerById = () => {
 
   if (!mapConfig) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="p-6 max-w-md w-full">
-          <h2 className="text-xl font-semibold mb-2">Map Not Found</h2>
-          <p className="text-muted-foreground">This map is not available.</p>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-muted/20">
+        <Card className="p-8 max-w-md w-full">
+          <EmptyState
+            icon={MapIcon}
+            title="Map Not Found"
+            description="This map is not available or may have been deleted."
+            actionLabel="Go Back"
+            onAction={() => navigate(-1)}
+          />
         </Card>
       </div>
     );

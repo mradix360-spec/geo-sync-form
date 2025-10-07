@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Download, Map as MapIcon, Layers } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import MapView from "@/components/MapView";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sidebar,
   SidebarContent,
@@ -152,7 +153,25 @@ const MapViewer = () => {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return (
+      <SidebarProvider>
+        <div className="min-h-screen flex flex-col w-full">
+          <header className="h-14 border-b border-border bg-card flex items-center px-4 justify-between">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-9 w-9" />
+              <Skeleton className="h-9 w-20" />
+            </div>
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-9 w-24" />
+            </div>
+          </header>
+          <div className="flex-1 bg-muted/20 relative">
+            <Skeleton className="absolute inset-0" />
+          </div>
+        </div>
+      </SidebarProvider>
+    );
   }
 
   return (
