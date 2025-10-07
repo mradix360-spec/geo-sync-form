@@ -1,97 +1,93 @@
-import { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { Card } from './ui/card';
+import { useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix for default marker icons in React-Leaflet
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+  iconUrl: icon,
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
 
 interface MapViewProps {
   responses: any[];
-  mapboxToken?: string;
 }
 
-const MapView = ({ responses, mapboxToken }: MapViewProps) => {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const [token, setToken] = useState(mapboxToken || '');
+// Component to fit bounds to all markers
+function FitBounds({ responses }: { responses: any[] }) {
+  const map = useMap();
 
   useEffect(() => {
-    if (!mapContainer.current || !token) return;
-
-    mapboxgl.accessToken = token;
-    
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/light-v11',
-      center: [0, 0],
-      zoom: 2,
-    });
-
-    map.current.addControl(new mapboxgl.NavigationControl());
-
-    map.current.on('load', () => {
-      if (!map.current) return;
-
-      // Add responses as GeoJSON source
-      map.current.addSource('responses', {
-        type: 'geojson',
-        data: {
-          type: 'FeatureCollection',
-          features: responses.map(r => r.geojson)
-        }
-      });
-
-      // Add point layer
-      map.current.addLayer({
-        id: 'response-points',
-        type: 'circle',
-        source: 'responses',
-        paint: {
-          'circle-radius': 8,
-          'circle-color': '#3b82f6',
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#ffffff'
-        }
-      });
-
-      // Fit bounds to show all points
-      if (responses.length > 0) {
-        const bounds = new mapboxgl.LngLatBounds();
-        responses.forEach(r => {
-          if (r.geojson?.geometry?.coordinates) {
-            bounds.extend(r.geojson.geometry.coordinates);
-          }
+    if (responses.length > 0) {
+      const validCoords = responses
+        .filter(r => r.geojson?.geometry?.coordinates)
+        .map(r => {
+          const coords = r.geojson.geometry.coordinates;
+          return [coords[1], coords[0]] as [number, number]; // Leaflet uses [lat, lng]
         });
-        map.current.fitBounds(bounds, { padding: 50 });
+
+      if (validCoords.length > 0) {
+        const bounds = L.latLngBounds(validCoords);
+        map.fitBounds(bounds, { padding: [50, 50] });
       }
-    });
+    }
+  }, [responses, map]);
 
-    return () => {
-      map.current?.remove();
-    };
-  }, [responses, token]);
+  return null;
+}
 
-  if (!mapboxToken && !token) {
-    return (
-      <Card className="p-6">
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Mapbox Token Required</h3>
-          <p className="text-sm text-muted-foreground">
-            Please enter your Mapbox public token to view the map. Get one at https://mapbox.com
-          </p>
-          <input
-            type="text"
-            placeholder="pk.your_mapbox_token"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md"
-          />
-        </div>
-      </Card>
-    );
-  }
+const MapView = ({ responses }: MapViewProps) => {
+  const defaultCenter: [number, number] = [0, 0];
+  const defaultZoom = 2;
 
   return (
-    <div className="relative w-full h-[600px] rounded-lg overflow-hidden">
-      <div ref={mapContainer} className="absolute inset-0" />
+    <div className="relative w-full h-[600px] rounded-lg overflow-hidden border border-border">
+      <MapContainer
+        center={defaultCenter}
+        zoom={defaultZoom}
+        className="h-full w-full"
+        zoomControl={true}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        
+        <FitBounds responses={responses} />
+
+        {responses.map((response, index) => {
+          if (!response.geojson?.geometry?.coordinates) return null;
+          
+          const coords = response.geojson.geometry.coordinates;
+          const position: [number, number] = [coords[1], coords[0]]; // Leaflet uses [lat, lng]
+
+          return (
+            <Marker key={index} position={position}>
+              <Popup>
+                <div className="text-sm">
+                  <strong>Response #{index + 1}</strong>
+                  {response.geojson.properties && (
+                    <div className="mt-2 space-y-1">
+                      {Object.entries(response.geojson.properties).map(([key, value]) => (
+                        <div key={key}>
+                          <span className="font-medium">{key}:</span> {String(value)}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+      </MapContainer>
     </div>
   );
 };
