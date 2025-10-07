@@ -257,132 +257,153 @@ export default function OrgLandingPage() {
         </section>
       )}
 
-      {/* Public Content Showcase */}
+      {/* Public Resources Showcase */}
       {(publicForms.length > 0 || publicMaps.length > 0 || publicDashboards.length > 0) && (
         <section className="py-24 px-4 relative">
-          <div 
-            className="absolute inset-0"
-            style={{ 
-              background: `linear-gradient(135deg, ${primaryColor}08 0%, ${secondaryColor}08 100%)`
-            }}
-          />
           <div className="container mx-auto max-w-7xl relative z-10">
             <div className="text-center mb-16 space-y-4">
               <h2 className="text-4xl md:text-5xl font-bold">
                 Explore Our Resources
               </h2>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Discover our collection of forms, maps, and dashboards
+                Browse our public forms, interactive maps, and data dashboards
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8">
-              {/* Forms */}
-              {publicForms.length > 0 && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 mb-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Public Forms */}
+              {publicForms.map((form, idx) => (
+                <Link 
+                  key={form.id}
+                  to={`/public/forms/${form.id}`}
+                  className="group"
+                >
+                  <Card 
+                    className="p-6 h-full hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 hover:border-primary/50 relative overflow-hidden"
+                    style={{ 
+                      animationDelay: `${idx * 50}ms`,
+                      animation: 'fade-in 0.5s ease-out forwards'
+                    }}
+                  >
                     <div 
-                      className="w-12 h-12 rounded-xl flex items-center justify-center"
-                      style={{ backgroundColor: `${primaryColor}20` }}
-                    >
-                      <FileText className="h-6 w-6" style={{ color: primaryColor }} />
-                    </div>
-                    <h3 className="text-2xl font-bold">Forms</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {publicForms.map((form, idx) => (
-                      <Card 
-                        key={form.id}
-                        className="p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-2 hover:border-primary/50"
-                        style={{ 
-                          animationDelay: `${idx * 100}ms`,
-                          animation: 'fade-in 0.5s ease-out forwards'
-                        }}
-                      >
-                        <h4 className="font-semibold text-lg mb-2">{form.title}</h4>
-                        {form.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {form.description}
-                          </p>
-                        )}
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Maps */}
-              {publicMaps.length > 0 && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div 
-                      className="w-12 h-12 rounded-xl flex items-center justify-center"
-                      style={{ backgroundColor: `${secondaryColor}20` }}
-                    >
-                      <Map className="h-6 w-6" style={{ color: secondaryColor }} />
-                    </div>
-                    <h3 className="text-2xl font-bold">Maps</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {publicMaps.map((map, idx) => (
-                      <Card 
-                        key={map.id}
-                        className="p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-2 hover:border-primary/50"
-                        style={{ 
-                          animationDelay: `${idx * 100 + 100}ms`,
-                          animation: 'fade-in 0.5s ease-out forwards'
-                        }}
-                      >
-                        <h4 className="font-semibold text-lg mb-2">{map.title}</h4>
-                        {map.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {map.description}
-                          </p>
-                        )}
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Dashboards */}
-              {publicDashboards.length > 0 && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div 
-                      className="w-12 h-12 rounded-xl flex items-center justify-center"
+                      className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300"
                       style={{ 
-                        background: `linear-gradient(135deg, ${primaryColor}20, ${secondaryColor}20)`
+                        background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`
                       }}
-                    >
-                      <BarChart3 
-                        className="h-6 w-6" 
-                        style={{ color: primaryColor }}
-                      />
+                    />
+                    <div className="relative z-10">
+                      <div 
+                        className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300"
+                        style={{ backgroundColor: `${primaryColor}20` }}
+                      >
+                        <FileText className="h-6 w-6" style={{ color: primaryColor }} />
+                      </div>
+                      <h4 className="font-bold text-xl mb-2 group-hover:text-primary transition-colors">
+                        {form.title}
+                      </h4>
+                      {form.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
+                          {form.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 text-sm font-medium" style={{ color: primaryColor }}>
+                        <span>Open Form</span>
+                        <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      </div>
                     </div>
-                    <h3 className="text-2xl font-bold">Dashboards</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {publicDashboards.map((dashboard, idx) => (
-                      <Card 
-                        key={dashboard.id}
-                        className="p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-2 hover:border-primary/50"
+                  </Card>
+                </Link>
+              ))}
+
+              {/* Public Maps */}
+              {publicMaps.map((map, idx) => (
+                <Link 
+                  key={map.id}
+                  to={`/public/maps/${map.id}`}
+                  className="group"
+                >
+                  <Card 
+                    className="p-6 h-full hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 hover:border-primary/50 relative overflow-hidden"
+                    style={{ 
+                      animationDelay: `${(idx + publicForms.length) * 50}ms`,
+                      animation: 'fade-in 0.5s ease-out forwards'
+                    }}
+                  >
+                    <div 
+                      className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300"
+                      style={{ 
+                        background: `linear-gradient(135deg, ${secondaryColor}, ${primaryColor})`
+                      }}
+                    />
+                    <div className="relative z-10">
+                      <div 
+                        className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300"
+                        style={{ backgroundColor: `${secondaryColor}20` }}
+                      >
+                        <Map className="h-6 w-6" style={{ color: secondaryColor }} />
+                      </div>
+                      <h4 className="font-bold text-xl mb-2 group-hover:text-primary transition-colors">
+                        {map.title}
+                      </h4>
+                      {map.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
+                          {map.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 text-sm font-medium" style={{ color: secondaryColor }}>
+                        <span>View Map</span>
+                        <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+
+              {/* Public Dashboards */}
+              {publicDashboards.map((dashboard, idx) => (
+                <Link 
+                  key={dashboard.id}
+                  to={`/public/dashboards/${dashboard.id}`}
+                  className="group"
+                >
+                  <Card 
+                    className="p-6 h-full hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 hover:border-primary/50 relative overflow-hidden"
+                    style={{ 
+                      animationDelay: `${(idx + publicForms.length + publicMaps.length) * 50}ms`,
+                      animation: 'fade-in 0.5s ease-out forwards'
+                    }}
+                  >
+                    <div 
+                      className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300"
+                      style={{ 
+                        background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`
+                      }}
+                    />
+                    <div className="relative z-10">
+                      <div 
+                        className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300"
                         style={{ 
-                          animationDelay: `${idx * 100 + 200}ms`,
-                          animation: 'fade-in 0.5s ease-out forwards'
+                          background: `linear-gradient(135deg, ${primaryColor}20, ${secondaryColor}20)`
                         }}
                       >
-                        <h4 className="font-semibold text-lg mb-2">{dashboard.title}</h4>
-                        {dashboard.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {dashboard.description}
-                          </p>
-                        )}
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
+                        <BarChart3 className="h-6 w-6" style={{ color: primaryColor }} />
+                      </div>
+                      <h4 className="font-bold text-xl mb-2 group-hover:text-primary transition-colors">
+                        {dashboard.title}
+                      </h4>
+                      {dashboard.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
+                          {dashboard.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 text-sm font-medium" style={{ color: primaryColor }}>
+                        <span>Open Dashboard</span>
+                        <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </div>
+                  </Card>
+                </Link>
+              ))}
             </div>
           </div>
         </section>
