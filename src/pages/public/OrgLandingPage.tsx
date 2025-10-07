@@ -409,38 +409,6 @@ export default function OrgLandingPage() {
         </section>
       )}
 
-      {/* Final CTA Section */}
-      <section className="py-24 px-4 relative">
-        <div className="container mx-auto max-w-4xl">
-          <Card className="relative overflow-hidden border-2 p-12 md:p-16 text-center">
-            <div 
-              className="absolute inset-0 opacity-10"
-              style={{ 
-                background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`
-              }}
-            />
-            <div className="relative z-10 space-y-6">
-              <h2 className="text-4xl md:text-5xl font-bold">
-                Ready to Transform Your Workflow?
-              </h2>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Join thousands of teams already using our platform to streamline their data collection
-              </p>
-              <Link to={`/org/${slug}/login`}>
-                <Button 
-                  size="lg"
-                  className="text-lg px-10 py-7 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-105 group mt-6"
-                  style={{ backgroundColor: primaryColor }}
-                >
-                  {config.cta_text || "Start Now"}
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-            </div>
-          </Card>
-        </div>
-      </section>
-
       {/* Modern Footer */}
       <footer className="py-12 px-4 border-t bg-muted/30">
         <div className="container mx-auto max-w-7xl">
