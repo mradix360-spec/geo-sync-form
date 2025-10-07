@@ -1,37 +1,51 @@
-const CACHE_NAME = 'geosync-v1';
+const CACHE_NAME = 'geosync-v3';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/src/main.tsx',
   '/src/index.css'
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(urlsToCache))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
   );
 });
 
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  const dest = event.request.destination;
+
+  // Never cache dev/build assets to avoid stale React/Vite chunks
+  const isDevAsset = url.pathname.includes('/node_modules/.vite/')
+    || url.pathname.includes('/@vite/')
+    || url.searchParams.has('v')
+    || dest === 'script'
+    || dest === 'worker'
+    || dest === 'document' && url.pathname.endsWith('.js');
+
+  if (isDevAsset) {
+    return event.respondWith(fetch(event.request));
+  }
+
+  // Cache-first for our app shell and static assets only
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        if (response) {
-          return response;
+    caches.match(event.request).then((response) => {
+      if (response) return response;
+      return fetch(event.request).then((networkResponse) => {
+        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+          return networkResponse;
         }
-        return fetch(event.request).then((response) => {
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
+        const responseToCache = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          // Only cache GET requests to same-origin non-script assets
+          if (event.request.method === 'GET' && url.origin === self.location.origin && dest !== 'script' && dest !== 'worker') {
+            cache.put(event.request, responseToCache);
           }
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-          return response;
         });
-      })
+        return networkResponse;
+      });
+    })
   );
 });
 
