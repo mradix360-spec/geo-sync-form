@@ -23,7 +23,7 @@ export const MapLayerControl = ({ layers, onToggleLayer }: MapLayerControlProps)
   }
 
   return (
-    <Card className="absolute top-6 right-6 z-[400] shadow-lg min-w-[220px]">
+    <Card className="absolute bottom-6 right-6 z-[400] shadow-lg min-w-[220px]">
       <div 
         className="p-3 border-b bg-muted/50 flex items-center justify-between cursor-pointer hover:bg-muted transition-colors"
         onClick={() => setExpanded(!expanded)}
