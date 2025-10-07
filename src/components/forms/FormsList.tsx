@@ -5,10 +5,11 @@ import { useRole } from "@/hooks/use-role";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Map, Plus, MapPin, Calendar, Users, Download, FormInput, Share2 } from "lucide-react";
+import { Map, Plus, MapPin, Calendar, Users, Download, FormInput, Share2, Layers } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { FormAssignmentDialog } from "@/components/FormAssignmentDialog";
 import { SharePermissionDialog } from "./SharePermissionDialog";
+import { GISIntegrationDialog } from "./GISIntegrationDialog";
 
 interface Form {
   id: string;
@@ -40,6 +41,10 @@ export const FormsList = ({
   const [assignFormTitle, setAssignFormTitle] = useState<string>("");
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [shareFormId, setShareFormId] = useState<string | null>(null);
+  const [showGISDialog, setShowGISDialog] = useState(false);
+  const [gisFormId, setGisFormId] = useState<string | null>(null);
+  const [gisFormTitle, setGisFormTitle] = useState<string>("");
+  const [gisShareToken, setGisShareToken] = useState<string | undefined>();
 
   // Use external data if provided, otherwise use internal state
   const forms = externalForms ?? internalForms;
@@ -79,6 +84,29 @@ export const FormsList = ({
       });
     } finally {
       setInternalLoading(false);
+    }
+  };
+
+  const handleGISIntegration = async (formId: string, title: string) => {
+    try {
+      const { data: share } = await supabase
+        .from('shares')
+        .select('token')
+        .eq('object_id', formId)
+        .eq('object_type', 'form')
+        .eq('access_type', 'public')
+        .maybeSingle();
+
+      setGisFormId(formId);
+      setGisFormTitle(title);
+      setGisShareToken(share?.token);
+      setShowGISDialog(true);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
     }
   };
 
@@ -277,13 +305,22 @@ export const FormsList = ({
                 </>
               )}
               {!isFieldUser() && (
-                <Button variant="outline" size="sm" onClick={(e) => {
-                  e.stopPropagation();
-                  handleExportGeoJSON(form.id);
-                }}>
-                  <Download className="w-3 h-3 mr-1" />
-                  Export
-                </Button>
+                <>
+                  <Button variant="outline" size="sm" onClick={(e) => {
+                    e.stopPropagation();
+                    handleGISIntegration(form.id, form.title);
+                  }}>
+                    <Layers className="w-3 h-3 mr-1" />
+                    GIS
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={(e) => {
+                    e.stopPropagation();
+                    handleExportGeoJSON(form.id);
+                  }}>
+                    <Download className="w-3 h-3 mr-1" />
+                    Export
+                  </Button>
+                </>
               )}
             </CardFooter>
           </Card>
@@ -315,6 +352,17 @@ export const FormsList = ({
           onSuccess={() => {
             loadForms();
           }}
+        />
+      )}
+
+      {showGISDialog && gisFormId && (
+        <GISIntegrationDialog
+          open={showGISDialog}
+          onOpenChange={setShowGISDialog}
+          formId={gisFormId}
+          formTitle={gisFormTitle}
+          shareToken={gisShareToken}
+          onTokenRegenerated={() => handleGISIntegration(gisFormId, gisFormTitle)}
         />
       )}
     </>

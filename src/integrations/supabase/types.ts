@@ -1163,6 +1163,10 @@ export type Database = {
         Args: { fid: string; since_timestamp?: string }
         Returns: Json
       }
+      get_form_from_share_token: {
+        Args: { p_token: string }
+        Returns: string
+      }
       get_forms_by_share_type: {
         Args: { share_filter?: string }
         Returns: {
