@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      form_activity_log: {
+        Row: {
+          action: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          object_id: string | null
+          object_type: string
+          organisation_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          object_id?: string | null
+          object_type: string
+          organisation_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          object_id?: string | null
+          object_type?: string
+          organisation_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_activity_log_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_activity_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_assignments: {
         Row: {
           assigned_at: string | null
@@ -52,6 +100,7 @@ export type Database = {
       }
       form_responses: {
         Row: {
+          client_id: string | null
           created_at: string | null
           form_id: string | null
           geojson: Json
@@ -62,6 +111,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          client_id?: string | null
           created_at?: string | null
           form_id?: string | null
           geojson: Json
@@ -72,6 +122,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          client_id?: string | null
           created_at?: string | null
           form_id?: string | null
           geojson?: Json
@@ -107,7 +158,9 @@ export type Database = {
           id: string
           is_published: boolean | null
           organisation_id: string | null
+          published_at: string | null
           schema: Json
+          status: string | null
           title: string
           updated_at: string | null
         }
@@ -119,7 +172,9 @@ export type Database = {
           id?: string
           is_published?: boolean | null
           organisation_id?: string | null
+          published_at?: string | null
           schema: Json
+          status?: string | null
           title: string
           updated_at?: string | null
         }
@@ -131,7 +186,9 @@ export type Database = {
           id?: string
           is_published?: boolean | null
           organisation_id?: string | null
+          published_at?: string | null
           schema?: Json
+          status?: string | null
           title?: string
           updated_at?: string | null
         }
@@ -152,6 +209,38 @@ export type Database = {
           },
         ]
       }
+      organisation_subscriptions: {
+        Row: {
+          active: boolean | null
+          organisation_id: string
+          plan: string | null
+          staff_limit: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          organisation_id: string
+          plan?: string | null
+          staff_limit?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          organisation_id?: string
+          plan?: string | null
+          staff_limit?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organisation_subscriptions_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: true
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organisations: {
         Row: {
           created_at: string | null
@@ -159,6 +248,7 @@ export type Database = {
           id: string
           max_users: number | null
           name: string
+          staff_count: number | null
           subscription_tier: string | null
           updated_at: string | null
         }
@@ -168,6 +258,7 @@ export type Database = {
           id?: string
           max_users?: number | null
           name: string
+          staff_count?: number | null
           subscription_tier?: string | null
           updated_at?: string | null
         }
@@ -177,6 +268,7 @@ export type Database = {
           id?: string
           max_users?: number | null
           name?: string
+          staff_count?: number | null
           subscription_tier?: string | null
           updated_at?: string | null
         }
@@ -820,6 +912,10 @@ export type Database = {
       geomfromewkt: {
         Args: { "": string }
         Returns: unknown
+      }
+      get_form_data_geojson: {
+        Args: { fid: string; since_timestamp?: string }
+        Returns: Json
       }
       get_proj4_from_srid: {
         Args: { "": number }
