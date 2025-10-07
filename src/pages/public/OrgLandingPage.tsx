@@ -19,6 +19,9 @@ interface OrgConfig {
     secondary_color?: string;
     cta_text?: string;
     features?: string[];
+    overlay_opacity?: number;
+    overlay_style?: 'gradient' | 'solid' | 'radial' | 'none';
+    overlay_color?: string;
   };
 }
 
@@ -110,8 +113,26 @@ export default function OrgLandingPage() {
   const primaryColor = config.primary_color || "#3B82F6";
   const secondaryColor = config.secondary_color || "#8B5CF6";
   const features = config.features?.filter(f => f.trim()) || [];
+  const overlayOpacity = config.overlay_opacity ?? 0.7;
+  const overlayStyle = config.overlay_style || 'gradient';
+  const overlayColor = config.overlay_color || '#000000';
 
   const defaultIcons = [Zap, Shield, Users];
+
+  const getOverlayStyle = () => {
+    switch (overlayStyle) {
+      case 'gradient':
+        return `linear-gradient(135deg, ${overlayColor}${Math.round(overlayOpacity * 255).toString(16).padStart(2, '0')}, ${overlayColor}${Math.round(overlayOpacity * 0.5 * 255).toString(16).padStart(2, '0')}, transparent)`;
+      case 'solid':
+        return overlayColor;
+      case 'radial':
+        return `radial-gradient(circle at center, transparent 0%, ${overlayColor}${Math.round(overlayOpacity * 255).toString(16).padStart(2, '0')} 100%)`;
+      case 'none':
+        return 'transparent';
+      default:
+        return `linear-gradient(135deg, ${overlayColor}${Math.round(overlayOpacity * 255).toString(16).padStart(2, '0')}, transparent)`;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background overflow-hidden">
@@ -132,10 +153,17 @@ export default function OrgLandingPage() {
         {config.banner_url ? (
           <>
             <div 
-              className="absolute inset-0 bg-cover bg-center"
+              className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-105"
               style={{ backgroundImage: `url(${config.banner_url})` }}
             />
-            <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/50 to-transparent" />
+            <div 
+              className="absolute inset-0 transition-opacity duration-500"
+              style={{ 
+                background: getOverlayStyle(),
+                opacity: overlayStyle === 'none' ? 0 : 1
+              }}
+            />
+            <div className="absolute inset-0 backdrop-blur-[2px]" />
           </>
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-background via-muted/30 to-background" />
