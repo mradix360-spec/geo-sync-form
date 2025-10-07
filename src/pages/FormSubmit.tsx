@@ -18,6 +18,17 @@ interface ValidationRule {
   message?: string;
 }
 
+interface Condition {
+  field: string;
+  operator: 'equals' | 'notEquals' | 'contains' | 'greaterThan' | 'lessThan' | 'isEmpty' | 'isNotEmpty';
+  value: string | number;
+}
+
+interface Calculation {
+  formula: string;
+  decimals?: number;
+}
+
 interface FormField {
   name: string;
   label: string;
@@ -27,6 +38,10 @@ interface FormField {
   options?: string[];
   accept?: string;
   maxSize?: number;
+  conditions?: Condition[];
+  conditionLogic?: 'AND' | 'OR';
+  calculation?: Calculation;
+  readonly?: boolean;
 }
 
 interface Form {
@@ -50,6 +65,7 @@ const FormSubmit = () => {
   const [fileUrls, setFileUrls] = useState<Record<string, string>>({});
   const [uploadingFiles, setUploadingFiles] = useState<Record<string, boolean>>({});
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [visibleFields, setVisibleFields] = useState<Set<string>>(new Set());
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState<string>('');
 
@@ -66,6 +82,35 @@ const FormSubmit = () => {
     loadForm();
     captureLocation();
   }, [formId]);
+
+  // Evaluate conditional logic and calculate fields whenever formData changes
+  useEffect(() => {
+    if (!form) return;
+    
+    // Evaluate visibility conditions
+    const newVisibleFields = new Set<string>();
+    form.schema.fields.forEach(field => {
+      if (!field.conditions || field.conditions.length === 0) {
+        newVisibleFields.add(field.name);
+      } else {
+        const isVisible = evaluateConditions(field.conditions, field.conditionLogic || 'AND');
+        if (isVisible) {
+          newVisibleFields.add(field.name);
+        }
+      }
+    });
+    setVisibleFields(newVisibleFields);
+
+    // Calculate field values
+    form.schema.fields.forEach(field => {
+      if (field.calculation && visibleFields.has(field.name)) {
+        const calculatedValue = calculateFieldValue(field.calculation);
+        if (calculatedValue !== null && formData[field.name] !== calculatedValue) {
+          setFormData(prev => ({ ...prev, [field.name]: calculatedValue }));
+        }
+      }
+    });
+  }, [formData, form]);
 
   const loadForm = async () => {
     try {
@@ -114,6 +159,80 @@ const FormSubmit = () => {
         setLocationError(`Location error: ${error.message}`);
       }
     );
+  };
+
+  const evaluateCondition = (condition: Condition): boolean => {
+    const fieldValue = formData[condition.field];
+    
+    switch (condition.operator) {
+      case 'equals':
+        return fieldValue == condition.value; // Loose equality for type flexibility
+      case 'notEquals':
+        return fieldValue != condition.value;
+      case 'contains':
+        return String(fieldValue || '').toLowerCase().includes(String(condition.value).toLowerCase());
+      case 'greaterThan':
+        return parseFloat(fieldValue) > parseFloat(String(condition.value));
+      case 'lessThan':
+        return parseFloat(fieldValue) < parseFloat(String(condition.value));
+      case 'isEmpty':
+        return !fieldValue || fieldValue === '';
+      case 'isNotEmpty':
+        return !!fieldValue && fieldValue !== '';
+      default:
+        return true;
+    }
+  };
+
+  const evaluateConditions = (conditions: Condition[], logic: 'AND' | 'OR'): boolean => {
+    if (conditions.length === 0) return true;
+    
+    if (logic === 'AND') {
+      return conditions.every(condition => evaluateCondition(condition));
+    } else {
+      return conditions.some(condition => evaluateCondition(condition));
+    }
+  };
+
+  const calculateFieldValue = (calculation: Calculation): number | string | null => {
+    try {
+      let formula = calculation.formula;
+      
+      // Replace field references with actual values
+      const fieldRefs = formula.match(/\{([^}]+)\}/g);
+      if (fieldRefs) {
+        fieldRefs.forEach(ref => {
+          const fieldName = ref.slice(1, -1); // Remove { }
+          const value = formData[fieldName];
+          if (value === undefined || value === null || value === '') {
+            formula = formula.replace(ref, '0');
+          } else {
+            formula = formula.replace(ref, String(value));
+          }
+        });
+      }
+
+      // Evaluate the formula safely
+      // Only allow numbers, operators, parentheses, and spaces
+      if (!/^[\d\s+\-*/().]+$/.test(formula)) {
+        return null;
+      }
+
+      // eslint-disable-next-line no-eval
+      const result = eval(formula);
+      
+      if (typeof result === 'number' && !isNaN(result)) {
+        if (calculation.decimals !== undefined) {
+          return parseFloat(result.toFixed(calculation.decimals));
+        }
+        return result;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Calculation error:', error);
+      return null;
+    }
   };
 
   const validateField = (field: FormField, value: any): string | null => {
@@ -339,10 +458,15 @@ const FormSubmit = () => {
               </div>
 
               {/* Dynamic Fields */}
-              {form.schema.fields.map((field) => (
+              {form.schema.fields
+                .filter(field => visibleFields.has(field.name))
+                .map((field) => (
                 <div key={field.name} className="space-y-2">
                   <Label htmlFor={field.name}>
-                    {field.label} {field.required && '*'}
+                    {field.label} {field.required && visibleFields.has(field.name) && '*'}
+                    {field.calculation && (
+                      <span className="ml-2 text-xs text-muted-foreground">(Calculated)</span>
+                    )}
                   </Label>
                   
                   {field.type === 'textarea' ? (
@@ -443,9 +567,11 @@ const FormSubmit = () => {
                     <Input
                       id={field.name}
                       type={field.type}
-                      required={field.required}
+                      required={field.required && visibleFields.has(field.name)}
                       value={formData[field.name] || ''}
+                      readOnly={field.readonly || !!field.calculation}
                       onChange={(e) => {
+                        if (field.readonly || field.calculation) return;
                         setFormData({ ...formData, [field.name]: e.target.value });
                         const error = validateField(field, e.target.value);
                         if (error) {
@@ -463,6 +589,7 @@ const FormSubmit = () => {
                       minLength={field.validation?.find(v => v.type === 'minLength')?.value as number}
                       maxLength={field.validation?.find(v => v.type === 'maxLength')?.value as number}
                       pattern={field.validation?.find(v => v.type === 'pattern')?.value as string}
+                      className={field.calculation ? 'bg-muted cursor-not-allowed' : ''}
                     />
                   )}
                   
