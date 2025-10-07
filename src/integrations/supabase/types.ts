@@ -1418,6 +1418,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      recalculate_all_staff_counts: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       spheroid_in: {
         Args: { "": unknown }
         Returns: unknown
