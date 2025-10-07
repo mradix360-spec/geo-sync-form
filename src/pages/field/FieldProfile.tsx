@@ -2,11 +2,41 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/use-role";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User, Mail, Building, Shield, Sparkles } from "lucide-react";
+import { User, Mail, Building, Shield, Sparkles, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const FieldProfile = () => {
   const { user } = useAuth();
   const { roles } = useRole();
+  const [organizationName, setOrganizationName] = useState<string | null>(null);
+  const [loadingOrg, setLoadingOrg] = useState(true);
+
+  useEffect(() => {
+    const fetchOrganization = async () => {
+      if (!user?.organisation_id) {
+        setLoadingOrg(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("organisations")
+          .select("name")
+          .eq("id", user.organisation_id)
+          .single();
+
+        if (error) throw error;
+        setOrganizationName(data?.name || null);
+      } catch (error) {
+        console.error("Error fetching organization:", error);
+      } finally {
+        setLoadingOrg(false);
+      }
+    };
+
+    fetchOrganization();
+  }, [user?.organisation_id]);
 
   return (
     <div className="p-4 space-y-6 animate-fade-in">
@@ -74,9 +104,16 @@ const FieldProfile = () => {
               </div>
               <div className="flex-1">
                 <p className="text-sm font-medium text-muted-foreground">Organization</p>
-                <p className="text-sm font-semibold text-foreground mt-0.5">
-                  {user?.organisation_id ? "Assigned" : "Not assigned"}
-                </p>
+                {loadingOrg ? (
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Loading...</span>
+                  </div>
+                ) : (
+                  <p className="text-sm font-semibold text-foreground mt-0.5">
+                    {organizationName || "Not assigned"}
+                  </p>
+                )}
               </div>
             </div>
           </div>
