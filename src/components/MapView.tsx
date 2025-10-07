@@ -16,12 +16,15 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 interface MapViewProps {
   responses?: any[];
+  basemapUrl?: string;
+  basemapAttribution?: string;
 }
 
-const MapView = ({ responses = [] }: MapViewProps) => {
+const MapView = ({ responses = [], basemapUrl, basemapAttribution }: MapViewProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
 
   // Initialize map once
   useEffect(() => {
@@ -34,8 +37,11 @@ const MapView = ({ responses = [] }: MapViewProps) => {
           scrollWheelZoom: true,
         });
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap contributors',
+        const defaultUrl = basemapUrl || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        const defaultAttribution = basemapAttribution || '&copy; OpenStreetMap contributors';
+
+        tileLayerRef.current = L.tileLayer(defaultUrl, {
+          attribution: defaultAttribution,
         }).addTo(mapRef.current);
 
         markersLayerRef.current = L.layerGroup().addTo(mapRef.current);
@@ -50,12 +56,35 @@ const MapView = ({ responses = [] }: MapViewProps) => {
           mapRef.current.remove();
           mapRef.current = null;
           markersLayerRef.current = null;
+          tileLayerRef.current = null;
         }
       } catch (cleanupErr) {
         console.warn('Error cleaning up Leaflet map:', cleanupErr);
       }
     };
   }, []);
+
+  // Update basemap when URL changes
+  useEffect(() => {
+    try {
+      const map = mapRef.current;
+      const oldTileLayer = tileLayerRef.current;
+      if (!map || !basemapUrl) return;
+
+      // Remove old tile layer
+      if (oldTileLayer) {
+        map.removeLayer(oldTileLayer);
+      }
+
+      // Add new tile layer
+      const newAttribution = basemapAttribution || '&copy; OpenStreetMap contributors';
+      tileLayerRef.current = L.tileLayer(basemapUrl, {
+        attribution: newAttribution,
+      }).addTo(map);
+    } catch (err) {
+      console.error('Error updating basemap:', err);
+    }
+  }, [basemapUrl, basemapAttribution]);
 
   // Update markers when responses change
   useEffect(() => {
@@ -109,7 +138,7 @@ const MapView = ({ responses = [] }: MapViewProps) => {
   }, [responses]);
 
   return (
-    <div className="relative w-full h-[600px] rounded-lg overflow-hidden border border-border">
+    <div className="relative w-full h-full">
       <div ref={containerRef} className="h-full w-full" />
     </div>
   );
