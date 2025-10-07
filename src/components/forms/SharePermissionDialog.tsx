@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Lock, Users, Building2, Globe, UserPlus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Lock, Users, Building2, Globe, UserPlus, Copy, Check, Code } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -33,6 +35,33 @@ export const SharePermissionDialog = ({
 }: SharePermissionDialogProps) => {
   const [shareType, setShareType] = useState(currentShareType);
   const [loading, setLoading] = useState(false);
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedEmbed, setCopiedEmbed] = useState(false);
+
+  useEffect(() => {
+    if (open && shareType === 'public') {
+      loadShareToken();
+    }
+  }, [open, shareType, formId]);
+
+  const loadShareToken = async () => {
+    try {
+      const { data } = await supabase
+        .from('shares')
+        .select('token')
+        .eq('object_id', formId)
+        .eq('object_type', objectType)
+        .eq('access_type', 'public')
+        .maybeSingle();
+
+      if (data?.token) {
+        setShareToken(data.token);
+      }
+    } catch (error) {
+      console.error('Error loading share token:', error);
+    }
+  };
 
   const shareOptions = [
     {
@@ -119,6 +148,12 @@ export const SharePermissionDialog = ({
         description: `${objectType === 'form' ? 'Form' : 'Map'} sharing settings updated`,
       });
 
+      if (shareType === 'public') {
+        await loadShareToken();
+      } else {
+        setShareToken(null);
+      }
+
       onSuccess?.();
       onOpenChange(false);
     } catch (error: any) {
@@ -130,6 +165,40 @@ export const SharePermissionDialog = ({
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getPublicUrl = () => {
+    if (!shareToken) return '';
+    return `${window.location.origin}/public/${objectType}/${shareToken}`;
+  };
+
+  const getEmbedCode = () => {
+    if (!shareToken) return '';
+    const embedUrl = `${window.location.origin}/embed/${objectType}/${shareToken}`;
+    return `<iframe src="${embedUrl}" width="100%" height="600" frameborder="0" style="border:0;" allowfullscreen></iframe>`;
+  };
+
+  const copyToClipboard = async (text: string, type: 'link' | 'embed') => {
+    try {
+      await navigator.clipboard.writeText(text);
+      if (type === 'link') {
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2000);
+      } else {
+        setCopiedEmbed(true);
+        setTimeout(() => setCopiedEmbed(false), 2000);
+      }
+      toast({
+        title: 'Copied!',
+        description: `${type === 'link' ? 'Link' : 'Embed code'} copied to clipboard`,
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to copy to clipboard',
+      });
     }
   };
 
@@ -169,6 +238,66 @@ export const SharePermissionDialog = ({
             );
           })}
         </RadioGroup>
+
+        {shareType === 'public' && shareToken && (
+          <>
+            <Separator className="my-4" />
+            
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Public Link</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={getPublicUrl()}
+                    readOnly
+                    className="font-mono text-sm"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => copyToClipboard(getPublicUrl(), 'link')}
+                  >
+                    {copiedLink ? (
+                      <Check className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium mb-2 block flex items-center gap-2">
+                  <Code className="h-4 w-4" />
+                  Embed Code
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={getEmbedCode()}
+                    readOnly
+                    className="font-mono text-sm"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => copyToClipboard(getEmbedCode(), 'embed')}
+                  >
+                    {copiedEmbed ? (
+                      <Check className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Copy this code to embed the {objectType} in your website
+                </p>
+              </div>
+            </div>
+          </>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

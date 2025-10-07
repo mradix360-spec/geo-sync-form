@@ -35,6 +35,10 @@ import FormBuilder from "./pages/FormBuilder";
 import FormSubmit from "./pages/FormSubmit";
 import MapViewer from "./pages/MapViewer";
 import MapBuilder from "./pages/MapBuilder";
+import PublicFormSubmit from "./pages/public/PublicFormSubmit";
+import PublicMapViewer from "./pages/public/PublicMapViewer";
+import EmbedFormViewer from "./pages/embed/EmbedFormViewer";
+import EmbedMapViewer from "./pages/embed/EmbedMapViewer";
 
 // Layouts
 import AnalystLayout from "./components/layouts/AnalystLayout";
@@ -56,6 +60,14 @@ function App() {
                   <Route path="/" element={<Index />} />
                   <Route path="/auth/login" element={<Login />} />
                   <Route path="/auth/register" element={<Register />} />
+                  
+                  {/* Public sharing routes */}
+                  <Route path="/public/form/:token" element={<PublicFormSubmit />} />
+                  <Route path="/public/map/:token" element={<PublicMapViewer />} />
+                  
+                  {/* Embed routes */}
+                  <Route path="/embed/form/:token" element={<EmbedFormViewer />} />
+                  <Route path="/embed/map/:token" element={<EmbedMapViewer />} />
 
                   {/* Protected analyst routes */}
                   <Route 
