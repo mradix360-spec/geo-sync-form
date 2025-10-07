@@ -6,7 +6,7 @@ interface User {
   id: string;
   email: string;
   full_name?: string;
-  role: string;
+  roles: string[];
   organisation_id?: string;
 }
 
@@ -40,37 +40,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      // For MVP, we'll use a mock JWT system
-      // In production, this would call your custom auth API
-      const mockToken = btoa(JSON.stringify({ email, exp: Date.now() + 86400000 }));
-      
-      // Query the users table
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email)
-        .single();
+      const { data, error } = await supabase.functions.invoke('auth-login', {
+        body: { email, password }
+      });
 
-      if (error || !userData) {
+      if (error || !data) {
         toast({
           variant: "destructive",
           title: "Login failed",
-          description: "Invalid email or password",
+          description: data?.error || "Invalid email or password",
         });
-        throw new Error('Invalid credentials');
+        throw new Error(data?.error || 'Invalid credentials');
       }
 
-      const user: User = {
-        id: userData.id,
-        email: userData.email,
-        full_name: userData.full_name,
-        role: userData.role,
-        organisation_id: userData.organisation_id,
-      };
+      const { token, user } = data;
 
-      localStorage.setItem('auth_token', mockToken);
+      localStorage.setItem('auth_token', token);
       localStorage.setItem('auth_user', JSON.stringify(user));
-      setToken(mockToken);
+      setToken(token);
       setUser(user);
 
       toast({
@@ -85,44 +72,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const register = async (email: string, password: string, fullName: string, orgName?: string) => {
     try {
-      let orgId: string | null = null;
+      const { data, error } = await supabase.functions.invoke('auth-register', {
+        body: { email, password, fullName, orgName }
+      });
 
-      // Create organization if provided
-      if (orgName) {
-        const { data: orgData, error: orgError } = await supabase
-          .from('organisations')
-          .insert({ name: orgName, current_users: 1 })
-          .select()
-          .single();
-
-        if (orgError) throw orgError;
-        orgId = orgData.id;
-      }
-
-      // Create user (in production, password would be hashed server-side)
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .insert({
-          email,
-          password_hash: btoa(password), // Mock hash - NEVER do this in production
-          full_name: fullName,
-          organisation_id: orgId,
-          role: orgName ? 'org_admin' : 'field_staff',
-        })
-        .select()
-        .single();
-
-      if (userError) {
+      if (error || !data) {
         toast({
           variant: "destructive",
           title: "Registration failed",
-          description: userError.message,
+          description: data?.error || "Failed to create account",
         });
-        throw userError;
+        throw new Error(data?.error || 'Registration failed');
       }
 
-      // Auto-login after registration
-      await login(email, password);
+      const { token, user } = data;
+
+      localStorage.setItem('auth_token', token);
+      localStorage.setItem('auth_user', JSON.stringify(user));
+      setToken(token);
+      setUser(user);
 
       toast({
         title: "Account created!",
