@@ -42,6 +42,8 @@ import DashboardViewer from "./pages/DashboardViewer";
 import PublicFormSubmit from "./pages/public/PublicFormSubmit";
 import PublicMapViewer from "./pages/public/PublicMapViewer";
 import PublicDashboardViewer from "./pages/public/PublicDashboardViewer";
+import OrgLandingPage from "./pages/public/OrgLandingPage";
+import OrgLogin from "./pages/auth/OrgLogin";
 import EmbedFormViewer from "./pages/embed/EmbedFormViewer";
 import EmbedMapViewer from "./pages/embed/EmbedMapViewer";
 
@@ -65,6 +67,10 @@ function App() {
                   <Route path="/" element={<Index />} />
                   <Route path="/auth/login" element={<Login />} />
                   <Route path="/auth/register" element={<Register />} />
+                  
+                  {/* Organization landing pages */}
+                  <Route path="/org/:slug" element={<OrgLandingPage />} />
+                  <Route path="/org/:slug/login" element={<OrgLogin />} />
                   
                   {/* Public sharing routes */}
                   <Route path="/public/form/:token" element={<PublicFormSubmit />} />

@@ -426,9 +426,11 @@ export type Database = {
           created_at: string | null
           current_users: number | null
           id: string
+          is_landing_enabled: boolean | null
           landing_config: Json | null
           max_users: number | null
           name: string
+          slug: string | null
           staff_count: number | null
           subscription_tier: string | null
           updated_at: string | null
@@ -437,9 +439,11 @@ export type Database = {
           created_at?: string | null
           current_users?: number | null
           id?: string
+          is_landing_enabled?: boolean | null
           landing_config?: Json | null
           max_users?: number | null
           name: string
+          slug?: string | null
           staff_count?: number | null
           subscription_tier?: string | null
           updated_at?: string | null
@@ -448,9 +452,11 @@ export type Database = {
           created_at?: string | null
           current_users?: number | null
           id?: string
+          is_landing_enabled?: boolean | null
           landing_config?: Json | null
           max_users?: number | null
           name?: string
+          slug?: string | null
           staff_count?: number | null
           subscription_tier?: string | null
           updated_at?: string | null
@@ -981,6 +987,10 @@ export type Database = {
       equals: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
+      }
+      generate_org_slug: {
+        Args: { org_id: string; org_name: string }
+        Returns: string
       }
       generate_share_token: {
         Args: Record<PropertyKey, never>
