@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/use-role";
 import { Button } from "@/components/ui/button";
 import { SyncStatus } from "@/components/SyncStatus";
-import { FileText, Map, BarChart3, Settings, LogOut, Menu, X } from "lucide-react";
+import { FileText, Map, BarChart3, Settings, LogOut, Menu, X, Shield } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const AnalystLayout = () => {
@@ -35,6 +35,11 @@ const AnalystLayout = () => {
     { to: "/analyst/dashboards", icon: BarChart3, label: "Dashboards" },
     { to: "/analyst/settings", icon: Settings, label: "Settings" },
   ];
+
+  // Add admin nav item only for admins
+  if (isAdmin()) {
+    navItems.push({ to: "/analyst/admin", icon: Shield, label: "Admin" });
+  }
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">

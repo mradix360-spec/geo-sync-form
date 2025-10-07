@@ -24,6 +24,7 @@ import FormsView from "./pages/analyst/FormsView";
 import MapsView from "./pages/analyst/MapsView";
 import DashboardsView from "./pages/analyst/DashboardsView";
 import SettingsView from "./pages/analyst/SettingsView";
+import AdminDashboard from "./pages/analyst/AdminDashboard";
 
 // Field staff pages
 import FieldForms from "./pages/field/FieldForms";
@@ -83,11 +84,12 @@ function App() {
                       </AnalystRoute>
                     }
                   >
-                    <Route index element={<AnalystDashboard />} />
+                  <Route index element={<AnalystDashboard />} />
                     <Route path="forms" element={<FormsView />} />
                     <Route path="maps" element={<MapsView />} />
                     <Route path="dashboards" element={<DashboardsView />} />
                     <Route path="settings" element={<SettingsView />} />
+                    <Route path="admin" element={<AdminDashboard />} />
                   </Route>
 
                   {/* Protected field staff routes */}
@@ -106,7 +108,7 @@ function App() {
 
                   {/* Shared protected routes */}
                   <Route 
-                    path="/form-builder" 
+                    path="/form-builder/:formId?" 
                     element={
                       <ProtectedRoute>
                         <FormBuilder />
