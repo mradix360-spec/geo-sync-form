@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Map, Calendar, Share2, Eye, Trash2 } from "lucide-react";
+import { Map, Calendar, Share2, Eye, Edit, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { SharePermissionDialog } from "../forms/SharePermissionDialog";
@@ -121,8 +121,7 @@ export const MapsList = ({ showHeader = true }: MapsListProps) => {
         {maps.map((map) => (
           <Card
             key={map.id}
-            className="hover:shadow-lg transition-all cursor-pointer"
-            onClick={() => navigate(`/map-builder/${map.id}`)}
+            className="hover:shadow-lg transition-all"
           >
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -145,10 +144,21 @@ export const MapsList = ({ showHeader = true }: MapsListProps) => {
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate(`/map-builder/${map.id}`);
+                  navigate(`/map-viewer/${map.id}`);
                 }}
               >
                 <Eye className="w-3 h-3 mr-1" />
+                View
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/map-builder/${map.id}`);
+                }}
+              >
+                <Edit className="w-3 h-3 mr-1" />
                 Edit
               </Button>
               <Button

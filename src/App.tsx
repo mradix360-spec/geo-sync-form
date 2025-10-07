@@ -34,10 +34,13 @@ import FieldProfile from "./pages/field/FieldProfile";
 import FormBuilder from "./pages/FormBuilder";
 import FormSubmit from "./pages/FormSubmit";
 import MapViewer from "./pages/MapViewer";
+import MapViewerById from "./pages/MapViewerById";
 import MapBuilder from "./pages/MapBuilder";
 import DashboardBuilder from "./pages/DashboardBuilder";
+import DashboardViewer from "./pages/DashboardViewer";
 import PublicFormSubmit from "./pages/public/PublicFormSubmit";
 import PublicMapViewer from "./pages/public/PublicMapViewer";
+import PublicDashboardViewer from "./pages/public/PublicDashboardViewer";
 import EmbedFormViewer from "./pages/embed/EmbedFormViewer";
 import EmbedMapViewer from "./pages/embed/EmbedMapViewer";
 
@@ -65,6 +68,7 @@ function App() {
                   {/* Public sharing routes */}
                   <Route path="/public/form/:token" element={<PublicFormSubmit />} />
                   <Route path="/public/map/:token" element={<PublicMapViewer />} />
+                  <Route path="/public/dashboard/:token" element={<PublicDashboardViewer />} />
                   
                   {/* Embed routes */}
                   <Route path="/embed/form/:token" element={<EmbedFormViewer />} />
@@ -138,6 +142,22 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <DashboardBuilder />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/dashboard-viewer/:id" 
+                    element={
+                      <ProtectedRoute>
+                        <DashboardViewer />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/map-viewer/:id" 
+                    element={
+                      <ProtectedRoute>
+                        <MapViewerById />
                       </ProtectedRoute>
                     } 
                   />

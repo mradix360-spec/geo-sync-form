@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, Calendar, Share2, Eye, Trash2 } from "lucide-react";
+import { BarChart3, Calendar, Share2, Eye, Edit, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { SharePermissionDialog } from "../forms/SharePermissionDialog";
@@ -119,8 +119,7 @@ export const DashboardsList = ({ showHeader = true }: DashboardsListProps) => {
         {dashboards.map((dashboard) => (
           <Card
             key={dashboard.id}
-            className="hover:shadow-lg transition-all cursor-pointer group"
-            onClick={() => navigate(`/dashboard-builder/${dashboard.id}`)}
+            className="hover:shadow-lg transition-all group"
           >
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -146,10 +145,21 @@ export const DashboardsList = ({ showHeader = true }: DashboardsListProps) => {
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate(`/dashboard-builder/${dashboard.id}`);
+                  navigate(`/dashboard-viewer/${dashboard.id}`);
                 }}
               >
                 <Eye className="w-3 h-3 mr-1" />
+                View
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/dashboard-builder/${dashboard.id}`);
+                }}
+              >
+                <Edit className="w-3 h-3 mr-1" />
                 Edit
               </Button>
               <Button
