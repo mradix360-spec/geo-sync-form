@@ -1,21 +1,16 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
+import { createCustomIcon, SymbolType, SymbolSize } from '@/lib/mapSymbols';
 
-// Fix for default marker icons in Leaflet
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-
-let DefaultIcon = L.icon({
-  iconUrl: icon,
-  shadowUrl: iconShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
-
-L.Marker.prototype.options.icon = DefaultIcon;
+interface ResponseWithSymbol {
+  geojson: any;
+  symbolType?: SymbolType;
+  symbolSize?: SymbolSize;
+  color?: string;
+}
 
 interface MapViewProps {
-  responses?: any[];
+  responses?: ResponseWithSymbol[];
   basemapUrl?: string;
   basemapAttribution?: string;
 }
@@ -159,7 +154,13 @@ const MapView = ({ responses = [], basemapUrl, basemapAttribution }: MapViewProp
               }
             </div>`;
 
-          L.marker(latlng, { icon: DefaultIcon }).addTo(layer).bindPopup(popupHtml);
+          const icon = createCustomIcon(
+            r.symbolType || 'circle',
+            r.color || '#3b82f6',
+            r.symbolSize || 'medium'
+          );
+
+          L.marker(latlng, { icon }).addTo(layer).bindPopup(popupHtml);
         }
       });
 

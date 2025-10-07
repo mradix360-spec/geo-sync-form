@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SymbolType, SymbolSize } from "@/lib/mapSymbols";
 
 interface MapLayer {
   id: string;
@@ -26,6 +27,8 @@ interface MapLayer {
   formTitle: string;
   visible: boolean;
   color: string;
+  symbolType?: SymbolType;
+  symbolSize?: SymbolSize;
   responses?: any[];
 }
 
@@ -128,6 +131,8 @@ const MapBuilder = () => {
               formTitle: formData?.title || "Unknown Form",
               visible: layer.visible ?? true,
               color: layer.color || "#3b82f6",
+              symbolType: layer.symbolType || 'circle',
+              symbolSize: layer.symbolSize || 'medium',
               responses: responses || [],
             };
           })
@@ -178,6 +183,8 @@ const MapBuilder = () => {
           formId: l.formId,
           visible: l.visible,
           color: l.color,
+          symbolType: l.symbolType || 'circle',
+          symbolSize: l.symbolSize || 'medium',
         })),
         viewport: {
           center: [0, 20],
@@ -300,6 +307,8 @@ const MapBuilder = () => {
         formTitle: formData.title,
         visible: true,
         color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
+        symbolType: 'circle',
+        symbolSize: 'medium',
         responses: responses || [],
       };
 
@@ -333,9 +342,26 @@ const MapBuilder = () => {
     ));
   };
 
+  const handleChangeSymbol = (layerId: string, symbolType: SymbolType) => {
+    setLayers(layers.map(l =>
+      l.id === layerId ? { ...l, symbolType } : l
+    ));
+  };
+
+  const handleChangeSize = (layerId: string, symbolSize: SymbolSize) => {
+    setLayers(layers.map(l =>
+      l.id === layerId ? { ...l, symbolSize } : l
+    ));
+  };
+
   const visibleResponses = layers
     .filter(l => l.visible)
-    .flatMap(l => l.responses || []);
+    .flatMap(l => (l.responses || []).map(r => ({
+      geojson: r.geojson,
+      symbolType: l.symbolType,
+      symbolSize: l.symbolSize,
+      color: l.color,
+    })));
 
   if (loading) {
     return (
@@ -419,6 +445,8 @@ const MapBuilder = () => {
                         onRemoveLayer={handleRemoveLayer}
                         onToggleLayer={handleToggleLayer}
                         onChangeColor={handleChangeLayerColor}
+                        onChangeSymbol={handleChangeSymbol}
+                        onChangeSize={handleChangeSize}
                       />
                     </TabsContent>
 

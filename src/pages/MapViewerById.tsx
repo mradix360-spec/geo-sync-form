@@ -6,6 +6,7 @@ import { ArrowLeft, Edit } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import MapView from "@/components/MapView";
 import { Card } from "@/components/ui/card";
+import { SymbolType, SymbolSize } from "@/lib/mapSymbols";
 
 const BASEMAPS = [
   {
@@ -121,7 +122,19 @@ const MapViewerById = () => {
           .in('form_id', formIds);
 
         if (responseError) throw responseError;
-        setResponses(responseData || []);
+        
+        // Map responses with their layer configuration
+        const mappedResponses = (responseData || []).map((r: any) => {
+          const layer = visibleLayers.find((l: any) => l.formId === r.form_id);
+          return {
+            geojson: r.geojson,
+            symbolType: layer?.symbolType || 'circle' as SymbolType,
+            symbolSize: layer?.symbolSize || 'medium' as SymbolSize,
+            color: layer?.color || '#3b82f6',
+          };
+        });
+        
+        setResponses(mappedResponses);
       }
     } catch (error: any) {
       console.error('Error loading map:', error);

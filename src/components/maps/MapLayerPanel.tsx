@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { SYMBOL_TYPES, SYMBOL_SIZES, SymbolType, SymbolSize } from "@/lib/mapSymbols";
 
 interface MapLayer {
   id: string;
@@ -17,6 +18,8 @@ interface MapLayer {
   formTitle: string;
   visible: boolean;
   color: string;
+  symbolType?: SymbolType;
+  symbolSize?: SymbolSize;
   responses?: any[];
 }
 
@@ -26,6 +29,8 @@ interface MapLayerPanelProps {
   onRemoveLayer: (layerId: string) => void;
   onToggleLayer: (layerId: string) => void;
   onChangeColor: (layerId: string, color: string) => void;
+  onChangeSymbol: (layerId: string, symbolType: SymbolType) => void;
+  onChangeSize: (layerId: string, symbolSize: SymbolSize) => void;
 }
 
 export const MapLayerPanel = ({
@@ -34,6 +39,8 @@ export const MapLayerPanel = ({
   onRemoveLayer,
   onToggleLayer,
   onChangeColor,
+  onChangeSymbol,
+  onChangeSize,
 }: MapLayerPanelProps) => {
   const { forms } = useForms();
   const [selectedFormId, setSelectedFormId] = useState<string>("");
@@ -87,44 +94,89 @@ export const MapLayerPanel = ({
           {layers.map((layer) => (
             <div
               key={layer.id}
-              className="flex items-center gap-2 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+              className="space-y-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
             >
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onToggleLayer(layer.id)}
-                className="h-8 w-8 p-0"
-              >
-                {layer.visible ? (
-                  <Eye className="w-4 h-4" />
-                ) : (
-                  <EyeOff className="w-4 h-4 text-muted-foreground" />
-                )}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onToggleLayer(layer.id)}
+                  className="h-8 w-8 p-0"
+                >
+                  {layer.visible ? (
+                    <Eye className="w-4 h-4" />
+                  ) : (
+                    <EyeOff className="w-4 h-4 text-muted-foreground" />
+                  )}
+                </Button>
 
-              <input
-                type="color"
-                value={layer.color}
-                onChange={(e) => onChangeColor(layer.id, e.target.value)}
-                className="w-8 h-8 rounded cursor-pointer"
-                title="Change color"
-              />
+                <input
+                  type="color"
+                  value={layer.color}
+                  onChange={(e) => onChangeColor(layer.id, e.target.value)}
+                  className="w-8 h-8 rounded cursor-pointer"
+                  title="Change color"
+                />
 
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{layer.formTitle}</p>
-                <p className="text-xs text-muted-foreground">
-                  {layer.responses?.length || 0} points
-                </p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{layer.formTitle}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {layer.responses?.length || 0} points
+                  </p>
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onRemoveLayer(layer.id)}
+                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
               </div>
 
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onRemoveLayer(layer.id)}
-                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">Symbol</Label>
+                  <Select
+                    value={layer.symbolType || 'circle'}
+                    onValueChange={(value) => onChangeSymbol(layer.id, value as SymbolType)}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SYMBOL_TYPES.map((symbol) => (
+                        <SelectItem key={symbol.id} value={symbol.id} className="text-xs">
+                          <span className="flex items-center gap-2">
+                            <span className="text-lg">{symbol.icon}</span>
+                            {symbol.name}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">Size</Label>
+                  <Select
+                    value={layer.symbolSize || 'medium'}
+                    onValueChange={(value) => onChangeSize(layer.id, value as SymbolSize)}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SYMBOL_SIZES.map((size) => (
+                        <SelectItem key={size.id} value={size.id} className="text-xs">
+                          {size.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
           ))}
         </div>
