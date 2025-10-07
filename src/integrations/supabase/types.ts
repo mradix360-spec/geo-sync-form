@@ -850,6 +850,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      hash_password: {
+        Args: { plain_password: string }
+        Returns: string
+      }
       json: {
         Args: { "": unknown }
         Returns: Json
@@ -2138,6 +2142,10 @@ export type Database = {
           table_name: string
         }
         Returns: string
+      }
+      verify_password: {
+        Args: { plain_password: string; user_password_hash: string }
+        Returns: boolean
       }
     }
     Enums: {
