@@ -1,1 +1,4 @@
 project_id = "shqclgwsgmlnimcggxch"
+
+[functions.export-geojson]
+verify_jwt = false

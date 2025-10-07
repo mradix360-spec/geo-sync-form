@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import FormBuilder from "./pages/FormBuilder";
+import FormSubmit from "./pages/FormSubmit";
+import MapViewer from "./pages/MapViewer";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +26,8 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/form-builder" element={<FormBuilder />} />
+            <Route path="/form-submit" element={<FormSubmit />} />
+            <Route path="/map-viewer" element={<MapViewer />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
