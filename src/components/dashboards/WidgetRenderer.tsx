@@ -65,8 +65,17 @@ export const WidgetRenderer = ({ widget, onUpdate }: WidgetRendererProps) => {
   };
 
   return (
-    <div className="h-full w-full">
-      {renderWidget()}
-    </div>
+    <Card className="h-full group relative overflow-hidden border border-border/50 bg-card/95 backdrop-blur-sm hover:border-primary/50 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:scale-[1.02]">
+      {/* Glass-morphism gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      
+      {/* Subtle shine effect on hover */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-primary/5 to-transparent opacity-0 group-hover:opacity-100 translate-x-[-100%] group-hover:translate-x-[100%] transition-all duration-700" />
+      
+      {/* Content */}
+      <div className="relative z-10 h-full">
+        {renderWidget()}
+      </div>
+    </Card>
   );
 };
