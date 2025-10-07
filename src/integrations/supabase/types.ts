@@ -825,6 +825,10 @@ export type Database = {
         Args: { "": number }
         Returns: string
       }
+      get_user_organisation_id: {
+        Args: { _user_id: string }
+        Returns: string
+      }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: {
