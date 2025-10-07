@@ -20,6 +20,9 @@ export function LandingPageEditor() {
   const [slug, setSlug] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#3B82F6");
   const [secondaryColor, setSecondaryColor] = useState("#8B5CF6");
+  const [overlayStyle, setOverlayStyle] = useState<'gradient' | 'solid' | 'radial' | 'none'>('gradient');
+  const [overlayOpacity, setOverlayOpacity] = useState(0.7);
+  const [overlayColor, setOverlayColor] = useState('#000000');
   const [ctaText, setCtaText] = useState("Get Started");
   const [features, setFeatures] = useState<string[]>(["", "", ""]);
   const [isEnabled, setIsEnabled] = useState(false);
@@ -50,6 +53,9 @@ export function LandingPageEditor() {
       setBannerUrl(config?.banner_url || "");
       setPrimaryColor(config?.primary_color || "#3B82F6");
       setSecondaryColor(config?.secondary_color || "#8B5CF6");
+      setOverlayStyle(config?.overlay_style || 'gradient');
+      setOverlayOpacity(typeof config?.overlay_opacity === 'number' ? config.overlay_opacity : 0.7);
+      setOverlayColor(config?.overlay_color || '#000000');
       setCtaText(config?.cta_text || "Get Started");
       setFeatures(config?.features || ["", "", ""]);
       setSlug(organization.slug || "");
@@ -66,6 +72,9 @@ export function LandingPageEditor() {
         banner_url: bannerUrl,
         primary_color: primaryColor,
         secondary_color: secondaryColor,
+        overlay_style: overlayStyle,
+        overlay_opacity: overlayOpacity,
+        overlay_color: overlayColor,
         cta_text: ctaText,
         features: features.filter(f => f.trim() !== ""),
       };
@@ -117,6 +126,32 @@ export function LandingPageEditor() {
   }
 
   const landingUrl = slug ? `${window.location.origin}/org/${slug}` : "";
+
+  const hexToRgb = (hex: string) => {
+    const clean = hex.replace('#','');
+    const bigint = parseInt(clean.length === 3
+      ? clean.split('').map(c => c + c).join('')
+      : clean, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return { r, g, b };
+  };
+
+  const getOverlayStyle = () => {
+    if (overlayStyle === 'none') return 'transparent';
+    const { r, g, b } = hexToRgb(overlayColor || '#000000');
+    const a = Math.max(0, Math.min(1, overlayOpacity));
+    switch (overlayStyle) {
+      case 'solid':
+        return `rgba(${r}, ${g}, ${b}, ${a})`;
+      case 'radial':
+        return `radial-gradient(circle at center, transparent 0%, rgba(${r}, ${g}, ${b}, ${a}) 100%)`;
+      case 'gradient':
+      default:
+        return `linear-gradient(135deg, rgba(${r}, ${g}, ${b}, ${a}), rgba(${r}, ${g}, ${b}, ${Math.max(0, a * 0.5)}), transparent)`;
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -222,6 +257,44 @@ export function LandingPageEditor() {
                 />
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="overlayStyle">Banner Overlay Style</Label>
+                  <select
+                    id="overlayStyle"
+                    value={overlayStyle}
+                    onChange={(e) => setOverlayStyle(e.target.value as any)}
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="gradient">Gradient</option>
+                    <option value="solid">Solid</option>
+                    <option value="radial">Radial</option>
+                    <option value="none">None</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="overlayColor">Overlay Color</Label>
+                  <Input
+                    id="overlayColor"
+                    type="color"
+                    value={overlayColor}
+                    onChange={(e) => setOverlayColor(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="overlayOpacity">Overlay Opacity (0 - 1)</Label>
+                  <Input
+                    id="overlayOpacity"
+                    type="number"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={overlayOpacity}
+                    onChange={(e) => setOverlayOpacity(parseFloat(e.target.value))}
+                  />
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="primaryColor">Primary Color</Label>
@@ -291,7 +364,8 @@ export function LandingPageEditor() {
                   className="h-48 bg-cover bg-center relative"
                   style={{ backgroundImage: `url(${bannerUrl})` }}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/30" />
+                  <div className="absolute inset-0" style={{ background: getOverlayStyle() }} />
+                  <div className="absolute inset-0 backdrop-blur-[2px]" />
                 </div>
               )}
               <div className="p-6 space-y-4">
