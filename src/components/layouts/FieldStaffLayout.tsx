@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/use-role";
-import { FileText, Map, User, LogOut } from "lucide-react";
+import { FileText, Database, User, LogOut } from "lucide-react";
 import { SyncStatus } from "@/components/SyncStatus";
 import { Button } from "@/components/ui/button";
 import { syncService } from "@/lib/syncService";
@@ -35,7 +35,7 @@ const FieldStaffLayout = () => {
 
   const navItems = [
     { path: "/field", icon: FileText, label: "Forms" },
-    { path: "/field/map", icon: Map, label: "Map" },
+    { path: "/field/offline", icon: Database, label: "Offline" },
     { path: "/field/profile", icon: User, label: "Profile" },
   ];
 
@@ -48,7 +48,7 @@ const FieldStaffLayout = () => {
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-primary to-primary-glow flex items-center justify-center shadow-[var(--shadow-glow)]">
-              <Map className="w-5 h-5 text-white" />
+              <Database className="w-5 h-5 text-white" />
             </div>
             <div>
               <h1 className="text-lg font-bold text-foreground">GeoSync</h1>

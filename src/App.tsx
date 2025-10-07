@@ -27,7 +27,7 @@ import SettingsView from "./pages/analyst/SettingsView";
 
 // Field staff pages
 import FieldForms from "./pages/field/FieldForms";
-import FieldMap from "./pages/field/FieldMap";
+import OfflineDataManager from "./pages/field/OfflineDataManager";
 import FieldProfile from "./pages/field/FieldProfile";
 
 // Shared pages
@@ -100,7 +100,7 @@ function App() {
                     }
                   >
                     <Route index element={<FieldForms />} />
-                    <Route path="map" element={<FieldMap />} />
+                    <Route path="offline" element={<OfflineDataManager />} />
                     <Route path="profile" element={<FieldProfile />} />
                   </Route>
 
