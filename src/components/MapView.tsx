@@ -1,10 +1,17 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet.markercluster';
+import 'leaflet-draw';
+import 'leaflet-draw/dist/leaflet.draw.css';
+// @ts-ignore
+import 'leaflet.heat';
+import html2canvas from 'html2canvas';
 import { createCustomIcon, SymbolType, SymbolSize } from '@/lib/mapSymbols';
 import { MapLayerControl } from '@/components/maps/MapLayerControl';
 import { MapLegend } from '@/components/maps/MapLegend';
 import { MapSearchBar } from '@/components/maps/MapSearchBar';
+import { MapToolbar } from '@/components/maps/MapToolbar';
+import { toast } from 'sonner';
 
 interface StyleRule {
   field: string;
@@ -53,6 +60,13 @@ const MapView = ({
   const mapRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.MarkerClusterGroup | L.LayerGroup | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const heatmapLayerRef = useRef<any>(null);
+  const drawControlRef = useRef<L.Control.Draw | null>(null);
+  const drawnItemsRef = useRef<L.FeatureGroup | null>(null);
+  
+  const [heatmapActive, setHeatmapActive] = useState(false);
+  const [measurementActive, setMeasurementActive] = useState(false);
+  const [drawingActive, setDrawingActive] = useState(false);
 
   // Handle search result selection
   const handleSearchResultSelect = (coordinates: [number, number]) => {
@@ -60,6 +74,179 @@ const MapView = ({
       mapRef.current.flyTo(coordinates, 16, {
         duration: 1.5,
       });
+    }
+  };
+
+  // Toggle heatmap
+  const handleToggleHeatmap = () => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (heatmapActive) {
+      // Remove heatmap
+      if (heatmapLayerRef.current) {
+        map.removeLayer(heatmapLayerRef.current);
+        heatmapLayerRef.current = null;
+      }
+      // Show markers
+      if (markersLayerRef.current) {
+        map.addLayer(markersLayerRef.current);
+      }
+      setHeatmapActive(false);
+      toast.success('Heatmap disabled');
+    } else {
+      // Create heatmap
+      const heatPoints: [number, number, number][] = [];
+      responses.forEach((r) => {
+        const coords = r?.geojson?.geometry?.coordinates;
+        if (Array.isArray(coords) && coords.length >= 2) {
+          heatPoints.push([coords[1], coords[0], 1]);
+        }
+      });
+
+      if (heatPoints.length > 0) {
+        // Hide markers
+        if (markersLayerRef.current) {
+          map.removeLayer(markersLayerRef.current);
+        }
+        // Add heatmap
+        heatmapLayerRef.current = (L as any).heatLayer(heatPoints, {
+          radius: 25,
+          blur: 15,
+          maxZoom: 17,
+        }).addTo(map);
+        setHeatmapActive(true);
+        toast.success('Heatmap enabled');
+      } else {
+        toast.error('No point data available for heatmap');
+      }
+    }
+  };
+
+  // Toggle measurement tools
+  const handleToggleMeasurement = () => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (measurementActive) {
+      map.off('click');
+      setMeasurementActive(false);
+      toast.success('Measurement disabled');
+    } else {
+      let points: L.LatLng[] = [];
+      let polyline: L.Polyline | null = null;
+      let markers: L.Marker[] = [];
+
+      const clickHandler = (e: L.LeafletMouseEvent) => {
+        points.push(e.latlng);
+        
+        const marker = L.marker(e.latlng, {
+          icon: L.divIcon({
+            className: 'measurement-marker',
+            html: '<div style="background: #3b82f6; width: 8px; height: 8px; border-radius: 50%; border: 2px solid white;"></div>',
+          }),
+        }).addTo(map);
+        markers.push(marker);
+
+        if (points.length > 1) {
+          if (polyline) map.removeLayer(polyline);
+          
+          polyline = L.polyline(points, {
+            color: '#3b82f6',
+            weight: 3,
+            dashArray: '5, 10',
+          }).addTo(map);
+
+          const distance = points.reduce((total, point, i) => {
+            if (i === 0) return 0;
+            return total + points[i - 1].distanceTo(point);
+          }, 0);
+
+          const distanceKm = (distance / 1000).toFixed(2);
+          toast.info(`Distance: ${distanceKm} km`);
+        }
+      };
+
+      map.on('click', clickHandler);
+      setMeasurementActive(true);
+      toast.success('Click on map to measure distance. Click measurement button again to stop.');
+    }
+  };
+
+  // Toggle drawing tools
+  const handleToggleDrawing = () => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (drawingActive) {
+      // Remove draw control
+      if (drawControlRef.current) {
+        map.removeControl(drawControlRef.current);
+        drawControlRef.current = null;
+      }
+      setDrawingActive(false);
+      toast.success('Drawing disabled');
+    } else {
+      // Initialize drawn items layer if needed
+      if (!drawnItemsRef.current) {
+        drawnItemsRef.current = new L.FeatureGroup();
+        map.addLayer(drawnItemsRef.current);
+      }
+
+      // Add draw control
+      drawControlRef.current = new L.Control.Draw({
+        edit: {
+          featureGroup: drawnItemsRef.current,
+        },
+        draw: {
+          polygon: true,
+          polyline: true,
+          rectangle: true,
+          circle: true,
+          marker: true,
+          circlemarker: false,
+        },
+      });
+      map.addControl(drawControlRef.current);
+
+      // Handle draw events
+      map.on('draw:created', (event: any) => {
+        const layer = event.layer;
+        drawnItemsRef.current?.addLayer(layer);
+        toast.success('Shape added to map');
+      });
+
+      setDrawingActive(true);
+      toast.success('Drawing enabled');
+    }
+  };
+
+  // Export map as image
+  const handleExportMap = async () => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    try {
+      toast.info('Generating image...');
+      const canvas = await html2canvas(container, {
+        useCORS: true,
+        allowTaint: true,
+      });
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.download = `map-export-${Date.now()}.png`;
+          link.href = url;
+          link.click();
+          URL.revokeObjectURL(url);
+          toast.success('Map exported successfully!');
+        }
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export map');
     }
   };
 
@@ -282,6 +469,16 @@ const MapView = ({
       
       {showControls && (
         <>
+          <MapToolbar
+            onToggleHeatmap={handleToggleHeatmap}
+            onToggleMeasurement={handleToggleMeasurement}
+            onToggleDrawing={handleToggleDrawing}
+            onExportMap={handleExportMap}
+            heatmapActive={heatmapActive}
+            measurementActive={measurementActive}
+            drawingActive={drawingActive}
+          />
+          
           <MapLayerControl 
             layers={layers.map(l => ({
               id: l.id,
