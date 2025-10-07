@@ -38,7 +38,13 @@ export function UserManagement() {
         .order("created_at", { ascending: false });
 
       if (userError) throw userError;
-      return userData as User[];
+      
+      // Filter out super_admin users - org admins should not see or manage them
+      const filteredUsers = userData?.filter(user => 
+        !user.user_roles?.some((r: any) => r.role === 'super_admin')
+      );
+      
+      return filteredUsers as User[];
     },
     enabled: !!currentUser?.organisation_id,
   });
