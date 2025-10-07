@@ -5,6 +5,7 @@ import { createCustomIcon, SymbolType, SymbolSize } from '@/lib/mapSymbols';
 
 interface StyleRule {
   field: string;
+  symbologyType?: 'single' | 'unique' | 'categorical';
   values: { value: string; color: string }[];
 }
 
@@ -205,11 +206,17 @@ const MapView = ({ responses = [], basemapUrl, basemapAttribution, enableCluster
 
           // Determine marker color based on style rules or default
           let markerColor = r.color || '#3b82f6';
-          if (r.styleRule && props[r.styleRule.field]) {
-            const fieldValue = String(props[r.styleRule.field]);
-            const matchingRule = r.styleRule.values.find(v => v.value === fieldValue);
-            if (matchingRule) {
-              markerColor = matchingRule.color;
+          if (r.styleRule) {
+            if (r.styleRule.symbologyType === 'single') {
+              // Single symbol - use the first color
+              markerColor = r.styleRule.values[0]?.color || markerColor;
+            } else if (props[r.styleRule.field]) {
+              // Unique values - match field value
+              const fieldValue = String(props[r.styleRule.field]);
+              const matchingRule = r.styleRule.values.find(v => v.value === fieldValue);
+              if (matchingRule) {
+                markerColor = matchingRule.color;
+              }
             }
           }
 

@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, Trash2, Plus, Settings } from "lucide-react";
+import { Eye, EyeOff, Trash2, Plus, Settings, X } from "lucide-react";
 import { useForms } from "@/hooks/use-forms";
 import { supabase } from "@/integrations/supabase/client";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -20,8 +21,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
+type SymbologyType = 'single' | 'unique' | 'categorical';
+
 interface StyleRule {
   field: string;
+  symbologyType?: SymbologyType;
   values: { value: string; color: string }[];
 }
 
@@ -64,6 +68,8 @@ export const MapLayerPanel = ({
   const [currentLayerId, setCurrentLayerId] = useState<string>("");
   const [formFields, setFormFields] = useState<string[]>([]);
   const [selectedField, setSelectedField] = useState<string>("");
+  const [symbologyType, setSymbologyType] = useState<SymbologyType>('unique');
+  const [singleColor, setSingleColor] = useState<string>('#3b82f6');
   const [fieldValues, setFieldValues] = useState<Array<{ value: string; color: string }>>([]);
   const [currentLayer, setCurrentLayer] = useState<MapLayer | null>(null);
 
@@ -76,7 +82,17 @@ export const MapLayerPanel = ({
       loadFormFields(currentLayer.formId);
       if (currentLayer.styleRule) {
         setSelectedField(currentLayer.styleRule.field);
+        setSymbologyType(currentLayer.styleRule.symbologyType || 'unique');
         setFieldValues(currentLayer.styleRule.values);
+        if (currentLayer.styleRule.symbologyType === 'single' && currentLayer.styleRule.values[0]) {
+          setSingleColor(currentLayer.styleRule.values[0].color);
+        }
+      } else {
+        // Reset to defaults
+        setSelectedField("");
+        setSymbologyType('unique');
+        setSingleColor('#3b82f6');
+        setFieldValues([]);
       }
     }
   }, [styleDialogOpen, currentLayer]);
@@ -146,15 +162,41 @@ export const MapLayerPanel = ({
     setStyleDialogOpen(true);
   };
 
+  const handleSymbologyTypeChange = (type: SymbologyType) => {
+    setSymbologyType(type);
+    
+    if (type === 'single') {
+      // Single value - one color for all
+      setFieldValues([{ value: '*', color: singleColor }]);
+    } else if (type === 'unique' && selectedField && currentLayer) {
+      // Unique values - reload field values
+      loadFieldValues(currentLayer.formId, selectedField);
+    }
+  };
+
   const handleApplyStyleRule = () => {
-    if (selectedField && fieldValues.length > 0) {
+    if (!selectedField) {
+      onChangeStyleRule(currentLayerId, undefined);
+      setStyleDialogOpen(false);
+      return;
+    }
+
+    if (symbologyType === 'single') {
       onChangeStyleRule(currentLayerId, {
         field: selectedField,
+        symbologyType: 'single',
+        values: [{ value: '*', color: singleColor }],
+      });
+    } else if (fieldValues.length > 0) {
+      onChangeStyleRule(currentLayerId, {
+        field: selectedField,
+        symbologyType,
         values: fieldValues,
       });
     } else {
       onChangeStyleRule(currentLayerId, undefined);
     }
+    
     setStyleDialogOpen(false);
     setSelectedField("");
     setFieldValues([]);
@@ -250,8 +292,17 @@ export const MapLayerPanel = ({
               </div>
 
               {layer.styleRule && (
-                <div className="text-xs text-muted-foreground px-2 py-1 bg-accent rounded">
-                  Styled by: {layer.styleRule.field}
+                <div className="text-xs text-muted-foreground px-2 py-1 bg-accent rounded flex items-center justify-between">
+                  <span>
+                    {layer.styleRule.symbologyType === 'single' ? 'Single color' : 
+                     layer.styleRule.symbologyType === 'categorical' ? 'Categorical' : 
+                     `Styled by: ${layer.styleRule.field}`}
+                  </span>
+                  {layer.styleRule.values.length > 0 && layer.styleRule.symbologyType !== 'single' && (
+                    <span className="text-xs font-medium">
+                      {layer.styleRule.values.length} values
+                    </span>
+                  )}
                 </div>
               )}
 
@@ -303,29 +354,43 @@ export const MapLayerPanel = ({
       )}
 
       <Dialog open={styleDialogOpen} onOpenChange={setStyleDialogOpen}>
-        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto z-[10000]">
-          <DialogHeader>
-            <DialogTitle>Attribute-Based Styling</DialogTitle>
-            <p className="text-sm text-muted-foreground">
-              Color markers based on field values from your form data
-            </p>
+        <DialogContent className="max-w-2xl max-h-[85vh] z-[10000] p-0 gap-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <div className="flex items-start justify-between">
+              <div>
+                <DialogTitle className="text-xl">Symbology Settings</DialogTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Configure how markers are styled based on data attributes
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setStyleDialogOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Select Field</Label>
+
+          <div className="px-6 py-4 space-y-6 overflow-y-auto max-h-[calc(85vh-180px)]">
+            {/* Field Selection */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Data Field</Label>
               <Select
                 value={selectedField}
                 onValueChange={(value) => {
                   setSelectedField(value);
-                  if (currentLayer) {
+                  if (currentLayer && symbologyType !== 'single') {
                     loadFieldValues(currentLayer.formId, value);
                   }
                 }}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a field..." />
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select field to style by..." />
                 </SelectTrigger>
-                <SelectContent className="z-[100] bg-popover">
+                <SelectContent className="z-[10001] bg-popover max-h-[200px]">
                   {formFields.map((field) => (
                     <SelectItem key={field} value={field}>
                       {field}
@@ -333,14 +398,92 @@ export const MapLayerPanel = ({
                   ))}
                 </SelectContent>
               </Select>
+              {!selectedField && (
+                <p className="text-xs text-muted-foreground">
+                  Select a field from your form data to begin styling
+                </p>
+              )}
             </div>
 
-            {fieldValues.length > 0 && (
-              <div className="space-y-2">
-                <Label>Assign Colors to Values</Label>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
+            {/* Symbology Type */}
+            {selectedField && (
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">Symbology Type</Label>
+                <RadioGroup
+                  value={symbologyType}
+                  onValueChange={(value) => handleSymbologyTypeChange(value as SymbologyType)}
+                  className="space-y-3"
+                >
+                  <div className="flex items-start space-x-3 rounded-lg border p-4 hover:bg-accent/50 transition-colors">
+                    <RadioGroupItem value="single" id="single" className="mt-1" />
+                    <div className="flex-1">
+                      <Label htmlFor="single" className="font-medium cursor-pointer">
+                        Single Symbol
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Use one color for all features
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3 rounded-lg border p-4 hover:bg-accent/50 transition-colors">
+                    <RadioGroupItem value="unique" id="unique" className="mt-1" />
+                    <div className="flex-1">
+                      <Label htmlFor="unique" className="font-medium cursor-pointer">
+                        Unique Values
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Different color for each unique value
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3 rounded-lg border p-4 hover:bg-accent/50 transition-colors">
+                    <RadioGroupItem value="categorical" id="categorical" className="mt-1" />
+                    <div className="flex-1">
+                      <Label htmlFor="categorical" className="font-medium cursor-pointer">
+                        Categorical
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Group similar values into categories
+                      </p>
+                    </div>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+
+            {/* Single Color Picker */}
+            {selectedField && symbologyType === 'single' && (
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">Symbol Color</Label>
+                <div className="flex items-center gap-4 p-4 rounded-lg border bg-card">
+                  <input
+                    type="color"
+                    value={singleColor}
+                    onChange={(e) => setSingleColor(e.target.value)}
+                    className="w-16 h-16 rounded cursor-pointer border-2"
+                  />
+                  <div>
+                    <p className="font-medium">All markers</p>
+                    <p className="text-sm text-muted-foreground">{singleColor}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Unique Values Color Assignment */}
+            {selectedField && symbologyType === 'unique' && fieldValues.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">Color Assignment</Label>
+                  <span className="text-sm text-muted-foreground">
+                    {fieldValues.length} unique value{fieldValues.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="space-y-2 max-h-64 overflow-y-auto rounded-lg border p-3 bg-muted/30">
                   {fieldValues.map((fv, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
+                    <div key={idx} className="flex items-center gap-3 p-2 rounded bg-card hover:bg-accent/50 transition-colors">
                       <input
                         type="color"
                         value={fv.color}
@@ -349,28 +492,52 @@ export const MapLayerPanel = ({
                           updated[idx].color = e.target.value;
                           setFieldValues(updated);
                         }}
-                        className="w-10 h-8 rounded cursor-pointer"
+                        className="w-12 h-12 rounded cursor-pointer border"
                       />
-                      <span className="text-sm flex-1 truncate">{fv.value}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{fv.value}</p>
+                        <p className="text-xs text-muted-foreground">{fv.color}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            <div className="flex gap-2 justify-end pt-4">
+            {/* Categorical (placeholder for future) */}
+            {selectedField && symbologyType === 'categorical' && (
+              <div className="p-6 rounded-lg border border-dashed bg-muted/30 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Categorical symbology allows you to group values into custom categories.
+                  This feature is coming soon!
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Footer Actions */}
+          <div className="px-6 py-4 border-t bg-muted/30 flex items-center justify-between">
+            <Button
+              variant="outline"
+              onClick={() => {
+                onChangeStyleRule(currentLayerId, undefined);
+                setStyleDialogOpen(false);
+              }}
+            >
+              Clear Styling
+            </Button>
+            <div className="flex gap-2">
               <Button
                 variant="outline"
-                onClick={() => {
-                  setStyleDialogOpen(false);
-                  setSelectedField("");
-                  setFieldValues([]);
-                }}
+                onClick={() => setStyleDialogOpen(false)}
               >
                 Cancel
               </Button>
-              <Button onClick={handleApplyStyleRule}>
-                Apply Style Rule
+              <Button 
+                onClick={handleApplyStyleRule}
+                disabled={!selectedField || (symbologyType === 'unique' && fieldValues.length === 0)}
+              >
+                Apply
               </Button>
             </div>
           </div>
