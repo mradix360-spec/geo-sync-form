@@ -1,11 +1,11 @@
 import { QuickActions } from "@/components/shared/QuickActions";
-import { FormsList } from "@/components/forms/FormsList";
+import { ContentShareTabs } from "@/components/forms/ContentShareTabs";
 
 const FormsView = () => {
   return (
     <div className="space-y-6">
       <QuickActions />
-      <FormsList />
+      <ContentShareTabs />
     </div>
   );
 };

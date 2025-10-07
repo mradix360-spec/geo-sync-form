@@ -152,6 +152,81 @@ export type Database = {
           },
         ]
       }
+      form_group_members: {
+        Row: {
+          added_at: string | null
+          group_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          added_at?: string | null
+          group_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          added_at?: string | null
+          group_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "form_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_group_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_groups: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          name: string
+          organisation_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name: string
+          organisation_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name?: string
+          organisation_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_groups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_groups_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_responses: {
         Row: {
           client_id: string | null
@@ -422,10 +497,12 @@ export type Database = {
           access_type: string | null
           created_at: string | null
           expires_at: string | null
+          group_id: string | null
           id: string
           object_id: string
           object_type: string | null
           organisation_id: string | null
+          shared_with_organisation: string | null
           shared_with_user: string | null
           token: string | null
         }
@@ -433,10 +510,12 @@ export type Database = {
           access_type?: string | null
           created_at?: string | null
           expires_at?: string | null
+          group_id?: string | null
           id?: string
           object_id: string
           object_type?: string | null
           organisation_id?: string | null
+          shared_with_organisation?: string | null
           shared_with_user?: string | null
           token?: string | null
         }
@@ -444,17 +523,33 @@ export type Database = {
           access_type?: string | null
           created_at?: string | null
           expires_at?: string | null
+          group_id?: string | null
           id?: string
           object_id?: string
           object_type?: string | null
           organisation_id?: string | null
+          shared_with_organisation?: string | null
           shared_with_user?: string | null
           token?: string | null
         }
         Relationships: [
           {
+            foreignKeyName: "shares_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "form_groups"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "shares_organisation_id_fkey"
             columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shares_shared_with_organisation_fkey"
+            columns: ["shared_with_organisation"]
             isOneToOne: false
             referencedRelation: "organisations"
             referencedColumns: ["id"]
@@ -1063,6 +1158,22 @@ export type Database = {
       get_form_data_geojson: {
         Args: { fid: string; since_timestamp?: string }
         Returns: Json
+      }
+      get_forms_by_share_type: {
+        Args: { share_filter?: string }
+        Returns: {
+          created_at: string
+          created_by: string
+          description: string
+          geometry_type: string
+          id: string
+          is_published: boolean
+          organisation_id: string
+          response_count: number
+          share_type: string
+          status: string
+          title: string
+        }[]
       }
       get_proj4_from_srid: {
         Args: { "": number }

@@ -5,9 +5,10 @@ import { useRole } from "@/hooks/use-role";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Map, Plus, MapPin, Calendar, Users, Download, FormInput } from "lucide-react";
+import { Map, Plus, MapPin, Calendar, Users, Download, FormInput, Share2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { FormAssignmentDialog } from "@/components/FormAssignmentDialog";
+import { SharePermissionDialog } from "./SharePermissionDialog";
 
 interface Form {
   id: string;
@@ -22,19 +23,34 @@ interface Form {
 
 interface FormsListProps {
   showHeader?: boolean;
+  forms?: Form[];
+  loading?: boolean;
 }
 
-export const FormsList = ({ showHeader = false }: FormsListProps) => {
+export const FormsList = ({ 
+  showHeader = false,
+  forms: externalForms,
+  loading: externalLoading
+}: FormsListProps) => {
   const navigate = useNavigate();
   const { canCreateForms, canAssignForms, isFieldUser } = useRole();
-  const [forms, setForms] = useState<Form[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [internalForms, setInternalForms] = useState<Form[]>([]);
+  const [internalLoading, setInternalLoading] = useState(true);
   const [assignFormId, setAssignFormId] = useState<string | null>(null);
   const [assignFormTitle, setAssignFormTitle] = useState<string>("");
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [shareFormId, setShareFormId] = useState<string | null>(null);
+
+  // Use external data if provided, otherwise use internal state
+  const forms = externalForms ?? internalForms;
+  const loading = externalLoading ?? internalLoading;
 
   useEffect(() => {
-    loadForms();
-  }, []);
+    // Only load forms if not provided externally
+    if (!externalForms) {
+      loadForms();
+    }
+  }, [externalForms]);
 
   const loadForms = async () => {
     try {
@@ -53,7 +69,7 @@ export const FormsList = ({ showHeader = false }: FormsListProps) => {
         response_count: form.form_responses?.[0]?.count || 0,
       })) || [];
 
-      setForms(formsWithCount);
+      setInternalForms(formsWithCount);
     } catch (error: any) {
       console.error('Error loading forms:', error);
       toast({
@@ -62,7 +78,7 @@ export const FormsList = ({ showHeader = false }: FormsListProps) => {
         description: error.message,
       });
     } finally {
-      setLoading(false);
+      setInternalLoading(false);
     }
   };
 
@@ -220,14 +236,24 @@ export const FormsList = ({ showHeader = false }: FormsListProps) => {
                 View Map
               </Button>
               {canAssignForms() && (
-                <Button variant="outline" size="sm" onClick={(e) => {
-                  e.stopPropagation();
-                  setAssignFormId(form.id);
-                  setAssignFormTitle(form.title);
-                }}>
-                  <Users className="w-3 h-3 mr-1" />
-                  Assign
-                </Button>
+                <>
+                  <Button variant="outline" size="sm" onClick={(e) => {
+                    e.stopPropagation();
+                    setAssignFormId(form.id);
+                    setAssignFormTitle(form.title);
+                  }}>
+                    <Users className="w-3 h-3 mr-1" />
+                    Assign
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={(e) => {
+                    e.stopPropagation();
+                    setShareFormId(form.id);
+                    setShowShareDialog(true);
+                  }}>
+                    <Share2 className="w-3 h-3 mr-1" />
+                    Share
+                  </Button>
+                </>
               )}
               {!isFieldUser() && (
                 <Button variant="outline" size="sm" onClick={(e) => {
@@ -255,6 +281,17 @@ export const FormsList = ({ showHeader = false }: FormsListProps) => {
             }
           }}
           onAssignmentComplete={() => {
+            loadForms();
+          }}
+        />
+      )}
+
+      {showShareDialog && shareFormId && (
+        <SharePermissionDialog
+          formId={shareFormId}
+          open={showShareDialog}
+          onOpenChange={setShowShareDialog}
+          onSuccess={() => {
             loadForms();
           }}
         />
