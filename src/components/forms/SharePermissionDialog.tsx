@@ -16,6 +16,7 @@ import { toast } from "@/hooks/use-toast";
 
 interface SharePermissionDialogProps {
   formId: string;
+  objectType?: 'form' | 'map';
   currentShareType?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -24,6 +25,7 @@ interface SharePermissionDialogProps {
 
 export const SharePermissionDialog = ({
   formId,
+  objectType = 'form',
   currentShareType = 'private',
   open,
   onOpenChange,
@@ -104,7 +106,7 @@ export const SharePermissionDialog = ({
           .from('shares')
           .insert({
             object_id: formId,
-            object_type: 'form',
+            object_type: objectType,
             access_type: shareType,
             organisation_id: userData.organisation_id,
           });
@@ -114,7 +116,7 @@ export const SharePermissionDialog = ({
 
       toast({
         title: 'Success',
-        description: 'Form sharing settings updated',
+        description: `${objectType === 'form' ? 'Form' : 'Map'} sharing settings updated`,
       });
 
       onSuccess?.();
@@ -135,9 +137,9 @@ export const SharePermissionDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Share Form</DialogTitle>
+          <DialogTitle>Share {objectType === 'form' ? 'Form' : 'Map'}</DialogTitle>
           <DialogDescription>
-            Control who can access this form
+            Control who can access this {objectType}
           </DialogDescription>
         </DialogHeader>
 
