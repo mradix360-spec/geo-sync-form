@@ -73,35 +73,39 @@ export const FieldStats = () => {
       title: "Today",
       value: stats.todaySubmissions,
       icon: Clock,
-      color: "text-blue-600",
+      gradient: "from-blue-500 to-cyan-500",
+      bgGradient: "from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20",
     },
     {
       title: "This Week",
       value: stats.weekSubmissions,
       icon: TrendingUp,
-      color: "text-green-600",
+      gradient: "from-green-500 to-emerald-500",
+      bgGradient: "from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20",
     },
     {
       title: "Total",
       value: stats.totalSubmissions,
       icon: MapPin,
-      color: "text-purple-600",
+      gradient: "from-purple-500 to-pink-500",
+      bgGradient: "from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20",
     },
     {
       title: "Forms",
       value: stats.assignedForms,
       icon: FileText,
-      color: "text-orange-600",
+      gradient: "from-orange-500 to-red-500",
+      bgGradient: "from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20",
     },
   ];
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="animate-pulse">
+          <Card key={i} className="animate-pulse border-0 shadow-[var(--shadow-card)]">
             <CardContent className="pt-6">
-              <div className="h-16 bg-muted rounded" />
+              <div className="h-16 bg-muted/50 rounded-lg" />
             </CardContent>
           </Card>
         ))}
@@ -110,17 +114,25 @@ export const FieldStats = () => {
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      {statCards.map((stat) => {
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {statCards.map((stat, index) => {
         const Icon = stat.icon;
         return (
-          <Card key={stat.title}>
+          <Card 
+            key={stat.title} 
+            className={`group relative overflow-hidden border-0 shadow-[var(--shadow-card)] hover-lift hover:shadow-[var(--shadow-hover)] transition-all duration-300 bg-gradient-to-br ${stat.bgGradient}`}
+            style={{ animationDelay: `${index * 0.1}s` }}
+          >
+            <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <Icon className={`h-4 w-4 ${stat.color}`} />
+              <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{stat.title}</CardTitle>
+              <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}>
+                <Icon className="h-4 w-4 text-white" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
+              <div className="text-3xl font-heading font-bold text-foreground">{stat.value}</div>
+              <p className="text-xs text-muted-foreground mt-1">submissions</p>
             </CardContent>
           </Card>
         );

@@ -132,70 +132,89 @@ const OfflineDataManager = () => {
   }
 
   return (
-    <div className="p-4 space-y-6 max-w-4xl mx-auto">
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">Offline Data Manager</h2>
-        <p className="text-muted-foreground">Manage your cached forms and pending submissions</p>
+    <div className="p-4 space-y-6 max-w-4xl mx-auto animate-fade-in">
+      {/* Header */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg">
+            <Database className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-heading font-bold text-foreground">Offline Manager</h2>
+            <p className="text-sm text-muted-foreground">Manage your cached data & sync</p>
+          </div>
+        </div>
       </div>
 
       {/* Connection Status */}
-      <Alert className={isOnline ? "border-green-500 bg-green-50 dark:bg-green-950" : "border-orange-500 bg-orange-50 dark:bg-orange-950"}>
-        <div className="flex items-center gap-2">
-          {isOnline ? <Wifi className="h-5 w-5 text-green-600" /> : <WifiOff className="h-5 w-5 text-orange-600" />}
-          <AlertDescription className={isOnline ? "text-green-800 dark:text-green-200" : "text-orange-800 dark:text-orange-200"}>
+      <Alert className={`border-0 shadow-[var(--shadow-card)] ${isOnline ? "bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20" : "bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20"} animate-slide-up`}>
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isOnline ? "bg-gradient-to-br from-green-500 to-emerald-500" : "bg-gradient-to-br from-orange-500 to-amber-500"} shadow-lg`}>
+            {isOnline ? <Wifi className="h-5 w-5 text-white" /> : <WifiOff className="h-5 w-5 text-white" />}
+          </div>
+          <AlertDescription className={`font-medium ${isOnline ? "text-green-800 dark:text-green-200" : "text-orange-800 dark:text-orange-200"}`}>
             {isOnline ? "Connected to the internet" : "Working offline - submissions will sync when online"}
           </AlertDescription>
         </div>
       </Alert>
 
       {/* Storage Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+        <Card className="border-0 shadow-[var(--shadow-card)] bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 hover-lift">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Pending Submissions</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-semibold text-muted-foreground">Pending</CardTitle>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
+              <Clock className="h-4 w-4 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalPending}</div>
-            <p className="text-xs text-muted-foreground">Waiting to sync</p>
+            <div className="text-3xl font-heading font-bold text-foreground">{totalPending}</div>
+            <p className="text-xs text-muted-foreground mt-1">Waiting to sync</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-0 shadow-[var(--shadow-card)] bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 hover-lift">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Cached Forms</CardTitle>
-            <Database className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-semibold text-muted-foreground">Cached</CardTitle>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+              <Database className="h-4 w-4 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalCached}</div>
-            <p className="text-xs text-muted-foreground">Available offline</p>
+            <div className="text-3xl font-heading font-bold text-foreground">{totalCached}</div>
+            <p className="text-xs text-muted-foreground mt-1">Available offline</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-0 shadow-[var(--shadow-card)] bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 hover-lift">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Storage</CardTitle>
-            <HardDrive className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-semibold text-muted-foreground">Storage</CardTitle>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
+              <HardDrive className="h-4 w-4 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(totalPending + totalCached)}</div>
-            <p className="text-xs text-muted-foreground">Total items stored</p>
+            <div className="text-3xl font-heading font-bold text-foreground">{(totalPending + totalCached)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total items</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Sync Button */}
       {totalPending > 0 && (
-        <Card>
+        <Card className="border-0 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-hover)] transition-all duration-300 animate-slide-up" style={{ animationDelay: '0.2s' }}>
           <CardHeader>
-            <CardTitle>Sync Data</CardTitle>
-            <CardDescription>Upload pending submissions to the server</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5" />
+              Sync Data
+            </CardTitle>
+            <CardDescription>Upload {totalPending} pending submission{totalPending !== 1 ? 's' : ''} to the server</CardDescription>
           </CardHeader>
           <CardContent>
             <Button 
               onClick={handleSync} 
               disabled={!isOnline || syncing}
-              className="w-full"
+              className="w-full bg-gradient-to-r from-primary to-secondary hover:shadow-[var(--shadow-glow)] transition-all duration-300 font-semibold"
             >
               {syncing ? (
                 <>
@@ -205,7 +224,7 @@ const OfflineDataManager = () => {
               ) : (
                 <>
                   <Upload className="w-4 h-4 mr-2" />
-                  Sync {totalPending} Submission{totalPending !== 1 ? 's' : ''}
+                  Sync Now
                 </>
               )}
             </Button>

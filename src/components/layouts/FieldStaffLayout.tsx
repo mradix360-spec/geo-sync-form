@@ -43,21 +43,24 @@ const FieldStaffLayout = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Mobile Header */}
-      <header className="border-b border-border bg-card shadow-sm sticky top-0 z-40">
+      {/* Modern Mobile Header */}
+      <header className="border-b border-border bg-card/80 backdrop-blur-lg shadow-sm sticky top-0 z-40">
         <div className="px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-primary to-primary-glow flex items-center justify-center shadow-[var(--shadow-glow)]">
-              <Database className="w-5 h-5 text-white" />
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary via-primary-glow to-secondary flex items-center justify-center shadow-[var(--shadow-glow)] animate-scale-in">
+                <Database className="w-5 h-5 text-white" />
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-card"></div>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-foreground">GeoSync</h1>
-              <p className="text-xs text-muted-foreground">{user?.full_name || user?.email}</p>
+              <h1 className="text-lg font-heading font-bold text-foreground tracking-tight">GeoSync</h1>
+              <p className="text-xs text-muted-foreground font-medium">{user?.full_name || user?.email}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <SyncStatus />
-            <Button variant="ghost" size="icon" onClick={handleLogout}>
+            <Button variant="ghost" size="icon" onClick={handleLogout} className="hover:bg-destructive/10 hover:text-destructive transition-colors">
               <LogOut className="w-5 h-5" />
             </Button>
           </div>
@@ -69,8 +72,8 @@ const FieldStaffLayout = () => {
         <Outlet />
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-lg z-50">
+      {/* Modern Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border shadow-lg z-50">
         <div className="grid grid-cols-3 gap-1 px-2 py-2">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -79,14 +82,17 @@ const FieldStaffLayout = () => {
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`flex flex-col items-center justify-center py-2 px-3 rounded-lg transition-colors ${
+                className={`group relative flex flex-col items-center justify-center py-3 px-3 rounded-xl transition-all duration-300 ${
                   active
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted"
+                    ? "bg-gradient-to-br from-primary to-secondary text-white shadow-[var(--shadow-glow)]"
+                    : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
                 }`}
               >
-                <Icon className="w-6 h-6 mb-1" />
-                <span className="text-xs font-medium">{item.label}</span>
+                {active && (
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-xl opacity-20 blur-xl"></div>
+                )}
+                <Icon className={`w-6 h-6 mb-1 transition-transform ${active ? 'scale-110' : 'group-hover:scale-105'}`} />
+                <span className={`text-xs font-semibold ${active ? 'font-bold' : ''}`}>{item.label}</span>
               </button>
             );
           })}
