@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/use-role";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Map, Plus, LogOut, FormInput, MapPin, Calendar } from "lucide-react";
+import { Map, Plus, LogOut, FormInput, MapPin, Calendar, Users, Download } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { FormAssignmentDialog } from "@/components/FormAssignmentDialog";
+import { SyncStatus } from "@/components/SyncStatus";
 
 interface Form {
   id: string;
@@ -14,6 +17,7 @@ interface Form {
   description: string;
   geometry_type: string;
   is_published: boolean;
+  status: string;
   created_at: string;
   response_count?: number;
 }
@@ -21,8 +25,11 @@ interface Form {
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { canCreateForms, canAssignForms, isFieldUser } = useRole();
   const [forms, setForms] = useState<Form[]>([]);
   const [loading, setLoading] = useState(true);
+  const [assignFormId, setAssignFormId] = useState<string | null>(null);
+  const [assignFormTitle, setAssignFormTitle] = useState<string>("");
 
   useEffect(() => {
     if (!user) {
@@ -35,13 +42,15 @@ const Dashboard = () => {
 
   const loadForms = async () => {
     try {
+      // RLS will automatically filter forms based on role
+      // Field staff will only see assigned, published forms
+      // Analysts/Admins will see all org forms
       const { data, error } = await supabase
         .from("forms")
         .select(`
           *,
           form_responses(count)
         `)
-        .eq("organisation_id", user?.organisation_id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -53,6 +62,7 @@ const Dashboard = () => {
 
       setForms(formsWithCount);
     } catch (error: any) {
+      console.error('Error loading forms:', error);
       toast({
         variant: "destructive",
         title: "Error loading forms",
@@ -60,6 +70,55 @@ const Dashboard = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportGeoJSON = async (formId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "You must be logged in to export data",
+        });
+        return;
+      }
+
+      const response = await fetch(
+        `https://shqclgwsgmlnimcggxch.supabase.co/functions/v1/export-geojson?formId=${formId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `form_${formId}_data.geojson`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Export successful",
+        description: "GeoJSON file downloaded",
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        variant: "destructive",
+        title: "Export failed",
+        description: "Failed to export GeoJSON data",
+      });
     }
   };
 
@@ -82,10 +141,13 @@ const Dashboard = () => {
               <p className="text-sm text-muted-foreground">{user?.full_name || user?.email}</p>
             </div>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Logout
-          </Button>
+          <div className="flex items-center gap-3">
+            <SyncStatus />
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -96,10 +158,12 @@ const Dashboard = () => {
             <h2 className="text-3xl font-bold text-foreground">My Forms</h2>
             <p className="text-muted-foreground mt-1">Create and manage field data collection forms</p>
           </div>
-          <Button onClick={() => navigate("/form-builder")} size="lg" className="shadow-[var(--shadow-glow)]">
-            <Plus className="w-5 h-5 mr-2" />
-            Create Form
-          </Button>
+          {canCreateForms() ? (
+            <Button onClick={() => navigate("/form-builder")} size="lg" className="shadow-[var(--shadow-glow)]">
+              <Plus className="w-5 h-5 mr-2" />
+              Create Form
+            </Button>
+          ) : null}
         </div>
 
         {loading ? (
@@ -159,14 +223,16 @@ const Dashboard = () => {
                     <span>{new Date(form.created_at).toLocaleDateString()}</span>
                   </div>
                 </CardContent>
-                <CardFooter className="gap-2">
-                  <Button variant="outline" size="sm" onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/form/${form.id}/submit`);
-                  }}>
-                    <Plus className="w-3 h-3 mr-1" />
-                    Submit
-                  </Button>
+                <CardFooter className="gap-2 flex-wrap">
+                  {!isFieldUser() && (
+                    <Button variant="outline" size="sm" onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/form/${form.id}/submit`);
+                    }}>
+                      <Plus className="w-3 h-3 mr-1" />
+                      Submit
+                    </Button>
+                  )}
                   <Button variant="outline" size="sm" onClick={(e) => {
                     e.stopPropagation();
                     navigate(`/form/${form.id}/map`);
@@ -174,12 +240,49 @@ const Dashboard = () => {
                     <Map className="w-3 h-3 mr-1" />
                     View Map
                   </Button>
+                  {canAssignForms() && (
+                    <Button variant="outline" size="sm" onClick={(e) => {
+                      e.stopPropagation();
+                      setAssignFormId(form.id);
+                      setAssignFormTitle(form.title);
+                    }}>
+                      <Users className="w-3 h-3 mr-1" />
+                      Assign
+                    </Button>
+                  )}
+                  {!isFieldUser() && (
+                    <Button variant="outline" size="sm" onClick={(e) => {
+                      e.stopPropagation();
+                      handleExportGeoJSON(form.id);
+                    }}>
+                      <Download className="w-3 h-3 mr-1" />
+                      Export
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
             ))}
           </div>
         )}
       </main>
+
+      {/* Form Assignment Dialog */}
+      {assignFormId && (
+        <FormAssignmentDialog
+          formId={assignFormId}
+          formTitle={assignFormTitle}
+          open={!!assignFormId}
+          onOpenChange={(open) => {
+            if (!open) {
+              setAssignFormId(null);
+              setAssignFormTitle("");
+            }
+          }}
+          onAssignmentComplete={() => {
+            loadForms();
+          }}
+        />
+      )}
     </div>
   );
 };

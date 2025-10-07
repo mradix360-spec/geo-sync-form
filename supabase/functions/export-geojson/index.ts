@@ -12,11 +12,13 @@ serve(async (req) => {
   }
 
   try {
-    const { formId } = await req.json();
+    const url = new URL(req.url);
+    const formId = url.searchParams.get('formId');
+    const since = url.searchParams.get('since');
 
     if (!formId) {
       return new Response(
-        JSON.stringify({ error: 'formId is required' }),
+        JSON.stringify({ error: 'formId parameter is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -31,27 +33,59 @@ serve(async (req) => {
       }
     );
 
-    // Fetch all responses for the form
-    const { data: responses, error } = await supabaseClient
-      .from('form_responses')
-      .select('geojson')
-      .eq('form_id', formId);
+    // Use the RPC function for efficient GeoJSON generation
+    const { data: geojson, error } = await supabaseClient.rpc(
+      'get_form_data_geojson',
+      { 
+        fid: formId,
+        since_timestamp: since ? new Date(since).toISOString() : null
+      }
+    );
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching GeoJSON:', error);
+      throw error;
+    }
 
-    // Build GeoJSON FeatureCollection
-    const geojson = {
-      type: 'FeatureCollection',
-      features: responses?.map(r => r.geojson) || []
-    };
+    // Get form metadata for filename and ETag
+    const { data: form } = await supabaseClient
+      .from('forms')
+      .select('title, updated_at')
+      .eq('id', formId)
+      .single();
+
+    const filename = form?.title 
+      ? `${form.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${formId.slice(0, 8)}.geojson`
+      : `form_${formId}.geojson`;
+
+    // Generate ETag from form updated_at
+    const etag = form?.updated_at 
+      ? `"${new Date(form.updated_at).getTime()}"`
+      : `"${Date.now()}"`;
+
+    // Check If-None-Match header for caching
+    const ifNoneMatch = req.headers.get('If-None-Match');
+    if (ifNoneMatch === etag) {
+      return new Response(null, {
+        status: 304,
+        headers: {
+          ...corsHeaders,
+          'ETag': etag,
+          'Cache-Control': 'public, max-age=60'
+        }
+      });
+    }
 
     return new Response(
-      JSON.stringify(geojson),
+      JSON.stringify(geojson, null, 2),
       { 
         headers: { 
           ...corsHeaders, 
-          'Content-Type': 'application/json',
-          'Content-Disposition': `attachment; filename="export_${formId}.geojson"`
+          'Content-Type': 'application/geo+json',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'ETag': etag,
+          'Last-Modified': form?.updated_at ? new Date(form.updated_at).toUTCString() : new Date().toUTCString(),
+          'Cache-Control': 'public, max-age=60'
         } 
       }
     );

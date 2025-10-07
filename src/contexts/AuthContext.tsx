@@ -53,10 +53,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw new Error(data?.error || 'Invalid credentials');
       }
 
+      // Fetch user roles after login
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', data.user.id);
+
+      const userWithRoles = {
+        ...data.user,
+        roles: roles?.map(r => r.role) || []
+      };
+
       localStorage.setItem('auth_token', data.token);
-      localStorage.setItem('auth_user', JSON.stringify(data.user));
+      localStorage.setItem('auth_user', JSON.stringify(userWithRoles));
       setToken(data.token);
-      setUser(data.user);
+      setUser(userWithRoles);
 
       toast({
         title: "Welcome back!",

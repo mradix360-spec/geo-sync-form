@@ -103,13 +103,19 @@ const FormSubmit = () => {
 
     setSubmitting(true);
     try {
+      // Generate client_id for idempotency
+      const clientId = `${user?.id || 'anonymous'}_${formId}_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+      
       const geojson = {
         type: 'Feature',
         geometry: {
           type: 'Point',
           coordinates: [location.lng, location.lat]
         },
-        properties: formData
+        properties: {
+          ...formData,
+          _client_id: clientId
+        }
       };
 
       // Try to submit online
@@ -119,13 +125,14 @@ const FormSubmit = () => {
           form_id: formId,
           user_id: user?.id,
           geojson,
+          client_id: clientId,
           synced: navigator.onLine,
         });
 
       if (error && !navigator.onLine) {
-        // Store offline
+        // Store offline with client_id
         await offlineStorage.addSubmission({
-          id: crypto.randomUUID(),
+          id: clientId,
           formId: formId!,
           geojson,
           timestamp: Date.now(),
