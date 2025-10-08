@@ -1164,6 +1164,16 @@ export type Database = {
         Args: { "": unknown } | { "": unknown }
         Returns: string
       }
+      calculate_organization_monthly_bill: {
+        Args: { org_id: string }
+        Returns: {
+          price_per_user: number
+          role: Database["public"]["Enums"]["app_role"]
+          subtotal: number
+          total: number
+          user_count: number
+        }[]
+      }
       cleanup_expired_sessions: {
         Args: Record<PropertyKey, never>
         Returns: undefined

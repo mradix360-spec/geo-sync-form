@@ -6,6 +6,10 @@ import { OrganizationManagement } from "@/components/admin/super/OrganizationMan
 import { BillingManagement } from "@/components/admin/super/BillingManagement";
 import { RevenueManagement } from "@/components/admin/super/RevenueManagement";
 import { AllUsersManagement } from "@/components/admin/super/AllUsersManagement";
+import { SystemContentOverview } from "@/components/admin/super/SystemContentOverview";
+import { FormsManagement } from "@/components/admin/super/FormsManagement";
+import { MapsManagement } from "@/components/admin/super/MapsManagement";
+import { DashboardsManagement } from "@/components/admin/super/DashboardsManagement";
 
 export default function SuperAdminDashboard() {
   const { hasRole } = useRole();
@@ -21,14 +25,21 @@ export default function SuperAdminDashboard() {
         <p className="text-muted-foreground">Manage organizations, billing, and system users</p>
       </div>
 
-      <Tabs defaultValue="requests" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="requests">Requests</TabsTrigger>
           <TabsTrigger value="organizations">Organizations</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="forms">Forms</TabsTrigger>
+          <TabsTrigger value="maps">Maps</TabsTrigger>
+          <TabsTrigger value="dashboards">Dashboards</TabsTrigger>
           <TabsTrigger value="billing">Billing</TabsTrigger>
-          <TabsTrigger value="revenue">Revenue</TabsTrigger>
-          <TabsTrigger value="users">All Users</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="overview">
+          <SystemContentOverview />
+        </TabsContent>
 
         <TabsContent value="requests">
           <OrganizationRequests />
@@ -38,16 +49,27 @@ export default function SuperAdminDashboard() {
           <OrganizationManagement />
         </TabsContent>
 
-        <TabsContent value="billing">
-          <BillingManagement />
-        </TabsContent>
-
-        <TabsContent value="revenue">
-          <RevenueManagement />
-        </TabsContent>
-
         <TabsContent value="users">
           <AllUsersManagement />
+        </TabsContent>
+
+        <TabsContent value="forms">
+          <FormsManagement />
+        </TabsContent>
+
+        <TabsContent value="maps">
+          <MapsManagement />
+        </TabsContent>
+
+        <TabsContent value="dashboards">
+          <DashboardsManagement />
+        </TabsContent>
+
+        <TabsContent value="billing">
+          <div className="space-y-6">
+            <BillingManagement />
+            <RevenueManagement />
+          </div>
         </TabsContent>
       </Tabs>
     </div>
