@@ -32,6 +32,47 @@ export const useForms = () => {
         return;
       }
 
+      // Check if user is field staff
+      const isFieldStaff = user.roles?.includes('field_staff');
+
+      // If field staff, only get assigned forms
+      if (isFieldStaff) {
+        const { data: assignments } = await supabase
+          .from('form_assignments')
+          .select('form_id')
+          .eq('user_id', user.id);
+        
+        const assignedFormIds = assignments?.map(a => a.form_id) || [];
+
+        if (assignedFormIds.length === 0) {
+          setForms([]);
+          setLoading(false);
+          return;
+        }
+
+        // Get only assigned forms
+        const { data: assignedForms, error: formsError } = await supabase
+          .from('forms')
+          .select(`
+            *,
+            form_responses(count)
+          `)
+          .in('id', assignedFormIds)
+          .order('created_at', { ascending: false });
+
+        if (formsError) throw formsError;
+
+        const formsWithCount = assignedForms?.map(form => ({
+          ...form,
+          response_count: form.form_responses?.[0]?.count || 0,
+        })) || [];
+
+        setForms(formsWithCount);
+        setLoading(false);
+        return;
+      }
+
+      // For non-field staff, get all accessible forms
       // Get user's groups
       const { data: userGroups } = await supabase
         .from('form_group_members')
