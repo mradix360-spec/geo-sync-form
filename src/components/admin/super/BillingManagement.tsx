@@ -273,6 +273,7 @@ export const BillingManagement = () => {
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Create New Invoice</DialogTitle>
+                    <DialogDescription>Fill in the details to create and save a draft invoice.</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
                     <div>

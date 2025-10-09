@@ -1,0 +1,45 @@
+-- Fix the calculate_organization_monthly_bill function with correct column names
+DROP FUNCTION IF EXISTS calculate_organization_monthly_bill(UUID);
+
+CREATE OR REPLACE FUNCTION calculate_organization_monthly_bill(org_id UUID)
+RETURNS TABLE (
+  role app_role,
+  user_count INTEGER,
+  price_per_user NUMERIC,
+  subtotal NUMERIC,
+  total NUMERIC
+) 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN QUERY
+  WITH role_counts AS (
+    SELECT 
+      ur.role,
+      COUNT(DISTINCT u.id)::INTEGER as user_count
+    FROM users u
+    JOIN user_roles ur ON u.id = ur.user_id
+    WHERE u.organisation_id = org_id 
+      AND u.is_active = true
+    GROUP BY ur.role
+  ),
+  role_costs AS (
+    SELECT 
+      rc.role,
+      rc.user_count,
+      rp.price_per_month,
+      (rc.user_count * rp.price_per_month) as subtotal
+    FROM role_counts rc
+    JOIN role_pricing rp ON rc.role = rp.role
+  )
+  SELECT 
+    role_costs.role,
+    role_costs.user_count,
+    role_costs.price_per_month as price_per_user,
+    role_costs.subtotal,
+    (SELECT SUM(subtotal) FROM role_costs) as total
+  FROM role_costs;
+END;
+$$;
