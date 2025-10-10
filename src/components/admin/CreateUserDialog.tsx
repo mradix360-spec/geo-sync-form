@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/use-role";
 
 interface CreateUserDialogProps {
   open: boolean;
@@ -23,9 +24,16 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
+  const { hasRole } = useRole();
+  const isSuperAdmin = hasRole('super_admin');
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      // Prevent org admins from creating super admin users
+      if (!isSuperAdmin && role === 'super_admin') {
+        throw new Error('Only super admins can create super admin users');
+      }
+
       // Hash password
       const { data: hashedData, error: hashError } = await supabase.rpc(
         "hash_password",
@@ -141,7 +149,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="super_admin">Super Admin</SelectItem>
+                {isSuperAdmin && <SelectItem value="super_admin">Super Admin</SelectItem>}
                 <SelectItem value="org_admin">Org Admin</SelectItem>
                 <SelectItem value="analyst">Analyst</SelectItem>
                 <SelectItem value="field_staff">Field Staff</SelectItem>
