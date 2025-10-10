@@ -25,9 +25,11 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 export const setSupabaseAuth = (token: string | null) => {
   if (token) {
     globalHeaders['Authorization'] = `Bearer ${token}`;
+    globalHeaders['authorization'] = `Bearer ${token}`; // ensure lowercase header too
     // Also update realtime auth
     supabase.realtime.setAuth(token);
   } else {
     delete globalHeaders['Authorization'];
+    delete globalHeaders['authorization'];
   }
 };
