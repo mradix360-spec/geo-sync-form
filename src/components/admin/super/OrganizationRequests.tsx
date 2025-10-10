@@ -17,10 +17,16 @@ export const OrganizationRequests = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('organisation_requests')
-        .select('*, users!organisation_requests_user_id_fkey(email, full_name)')
+        .select(`
+          *,
+          users!organisation_requests_user_id_fkey(email, full_name)
+        `)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching org requests:', error);
+        throw error;
+      }
       return data;
     }
   });
