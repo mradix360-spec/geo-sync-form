@@ -17,7 +17,7 @@ export const OrganizationRequests = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('organisation_requests')
-        .select('*, users(email, full_name)')
+        .select('*, users!organisation_requests_user_id_fkey(email, full_name)')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -74,6 +74,7 @@ export const OrganizationRequests = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['org-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['all-organizations'] });
       toast.success('Organization request approved');
     },
     onError: (error) => {
