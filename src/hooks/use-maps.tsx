@@ -60,15 +60,18 @@ export const useMaps = () => {
         // 1. User created it
         if (map.created_by === user.id) return true;
 
-        // 2. Map is in user's organization
+        const mapShares = shares?.filter(s => s.object_id === map.id) || [];
+
+        // 2. Map is shared with user's organization from another organization
+        if (mapShares.some(s => s.shared_with_organisation === user.organisation_id)) return true;
+
+        // 3. Map is in user's organization
         if (map.organisation_id === user.organisation_id) {
-          const mapShares = shares?.filter(s => s.object_id === map.id) || [];
-          
           // If no shares, org can see it
           if (mapShares.length === 0) return true;
 
           // Check for organization share
-          if (mapShares.some(s => s.shared_with_organisation === user.organisation_id)) return true;
+          if (mapShares.some(s => s.access_type === 'organisation')) return true;
 
           // Check for group share
           if (mapShares.some(s => s.group_id && groupIds.includes(s.group_id))) return true;

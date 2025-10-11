@@ -40,6 +40,7 @@ export const SharePermissionDialog = ({
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
+  const [targetOrgId, setTargetOrgId] = useState('');
 
   useEffect(() => {
     if (open && shareType === 'public') {
@@ -107,21 +108,30 @@ export const SharePermissionDialog = ({
         throw new Error('User organisation not found');
       }
 
+      // Validate organization ID if sharing with other organisation
+      if (shareType === 'other_organisation' && !targetOrgId.trim()) {
+        throw new Error('Please enter an organization ID');
+      }
+
       // Check if share exists
       const { data: existingShare } = await supabase
         .from('shares')
         .select('id')
         .eq('object_id', formId)
+        .eq('object_type', objectType)
         .maybeSingle();
+
+      const shareData: any = {
+        access_type: shareType,
+        organisation_id: user.organisation_id,
+        shared_with_organisation: shareType === 'other_organisation' ? targetOrgId : null,
+      };
 
       if (existingShare) {
         // Update existing share
         const { error } = await supabase
           .from('shares')
-          .update({
-            access_type: shareType,
-            organisation_id: user.organisation_id,
-          })
+          .update(shareData)
           .eq('id', existingShare.id);
 
         if (error) throw error;
@@ -130,10 +140,9 @@ export const SharePermissionDialog = ({
         const { error } = await supabase
           .from('shares')
           .insert({
+            ...shareData,
             object_id: formId,
             object_type: objectType,
-            access_type: shareType,
-            organisation_id: user.organisation_id,
           });
 
         if (error) throw error;
@@ -234,6 +243,24 @@ export const SharePermissionDialog = ({
             );
           })}
         </RadioGroup>
+
+        {shareType === 'other_organisation' && (
+          <>
+            <Separator className="my-4" />
+            <div className="space-y-2">
+              <Label htmlFor="org-id">Organisation ID</Label>
+              <Input
+                id="org-id"
+                placeholder="Enter organisation ID"
+                value={targetOrgId}
+                onChange={(e) => setTargetOrgId(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter the UUID of the organisation you want to share with
+              </p>
+            </div>
+          </>
+        )}
 
         {shareType === 'public' && shareToken && (
           <>

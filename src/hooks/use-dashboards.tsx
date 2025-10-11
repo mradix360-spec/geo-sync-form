@@ -63,15 +63,18 @@ export const useDashboards = () => {
         // 2. Dashboard is public
         if (dashboard.is_public) return true;
 
-        // 3. Dashboard is in user's organization
+        const dashboardShares = shares?.filter(s => s.object_id === dashboard.id) || [];
+
+        // 3. Dashboard is shared with user's organization from another organization
+        if (dashboardShares.some(s => s.shared_with_organisation === user.organisation_id)) return true;
+
+        // 4. Dashboard is in user's organization
         if (dashboard.organisation_id === user.organisation_id) {
-          const dashboardShares = shares?.filter(s => s.object_id === dashboard.id) || [];
-          
           // If no shares, org can see it
           if (dashboardShares.length === 0) return true;
 
           // Check for organization share
-          if (dashboardShares.some(s => s.shared_with_organisation === user.organisation_id)) return true;
+          if (dashboardShares.some(s => s.access_type === 'organisation')) return true;
 
           // Check for group share
           if (dashboardShares.some(s => s.group_id && groupIds.includes(s.group_id))) return true;
