@@ -10,6 +10,9 @@ import { ContentFilters } from "./content/ContentFilters";
 import { ContentStats } from "./content/ContentStats";
 import { ContentItem } from "./content/ContentItem";
 import { SharePermissionDialog } from "../forms/SharePermissionDialog";
+import { EmptyState } from "../shared/EmptyState";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface ContentItem {
   id: string;
@@ -179,17 +182,64 @@ export function ContentManagement() {
     );
   }
 
+  // Show empty state if no content exists
+  const hasNoContent = allContent.length === 0;
+
   return (
     <>
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold">Content Management</h2>
-          <p className="text-muted-foreground">
-            Comprehensive view of all forms, maps, and dashboards
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">Content</h2>
+            <p className="text-muted-foreground">
+              Manage all forms, maps, and dashboards
+            </p>
+          </div>
+          {!hasNoContent && (
+            <div className="flex gap-2">
+              <Button onClick={() => navigate('/form-builder')}>
+                <Plus className="h-4 w-4 mr-2" />
+                New Form
+              </Button>
+              <Button onClick={() => navigate('/map-builder')} variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                New Map
+              </Button>
+              <Button onClick={() => navigate('/dashboard-builder')} variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                New Dashboard
+              </Button>
+            </div>
+          )}
         </div>
 
-        <ContentStats {...stats} />
+        {hasNoContent ? (
+          <Card>
+            <CardContent className="pt-6">
+              <EmptyState
+                icon={Plus}
+                title="No content yet"
+                description="Start creating forms, maps, and dashboards to manage your organization's data"
+              />
+              <div className="flex justify-center gap-4 mt-6">
+                <Button onClick={() => navigate('/form-builder')}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Form
+                </Button>
+                <Button onClick={() => navigate('/map-builder')} variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Map
+                </Button>
+                <Button onClick={() => navigate('/dashboard-builder')} variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Dashboard
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <ContentStats {...stats} />
 
         <Card>
           <CardHeader>
@@ -242,6 +292,8 @@ export function ContentManagement() {
             )}
           </CardContent>
         </Card>
+          </>
+        )}
       </div>
 
       {selectedItem && (
