@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/use-role";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CreateUserDialogProps {
   open: boolean;
@@ -27,11 +28,37 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
   const { hasRole } = useRole();
   const isSuperAdmin = hasRole('super_admin');
 
+  // Fetch organization limits
+  const { data: orgData } = useQuery({
+    queryKey: ["org-limits", currentUser?.organisation_id],
+    queryFn: async () => {
+      if (!currentUser?.organisation_id) return null;
+      
+      const { data, error } = await supabase
+        .from("organisations")
+        .select("max_users, staff_count")
+        .eq("id", currentUser.organisation_id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!currentUser?.organisation_id && open,
+  });
+
+  const remainingSlots = orgData ? (orgData.max_users - (orgData.staff_count || 0)) : 0;
+  const isAtLimit = remainingSlots <= 0;
+
   const createMutation = useMutation({
     mutationFn: async () => {
       // Prevent org admins from creating super admin users
       if (!isSuperAdmin && role === 'super_admin') {
         throw new Error('Only super admins can create super admin users');
+      }
+
+      // Check organization user limit
+      if (isAtLimit) {
+        throw new Error(`Organization has reached its user limit of ${orgData?.max_users} users. Please contact support to increase your limit.`);
       }
 
       // Hash password
@@ -111,6 +138,22 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {orgData && (
+            <Alert variant={isAtLimit ? "destructive" : "default"}>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {isAtLimit ? (
+                  <>Organization has reached its limit of {orgData.max_users} users. Please contact support to increase your limit.</>
+                ) : (
+                  <>
+                    User slots: {orgData.staff_count || 0} / {orgData.max_users} 
+                    ({remainingSlots} remaining)
+                  </>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="email">Email *</Label>
             <Input
@@ -161,7 +204,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={createMutation.isPending}>
+            <Button type="submit" disabled={createMutation.isPending || isAtLimit}>
               {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create User
             </Button>
