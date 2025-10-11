@@ -330,38 +330,32 @@ export const BillingManagement = () => {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {invoices?.map((invoice: any) => (
-            <Card key={invoice.id} className="border-2">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="font-semibold">{invoice.invoice_number}</h3>
-                    <p className="text-sm text-muted-foreground">{invoice.organisations?.name}</p>
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-muted-foreground">Draft Invoices</h3>
+            {invoices?.filter((inv: any) => inv.status === 'draft').map((invoice: any) => (
+              <Card key={invoice.id} className="border-2">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-semibold">{invoice.invoice_number}</h3>
+                      <p className="text-sm text-muted-foreground">{invoice.organisations?.name}</p>
+                    </div>
+                    <Badge variant="secondary">{invoice.status}</Badge>
                   </div>
-                  <Badge variant={
-                    invoice.status === 'paid' ? 'default' :
-                    invoice.status === 'sent' ? 'outline' :
-                    invoice.status === 'overdue' ? 'destructive' :
-                    'secondary'
-                  }>
-                    {invoice.status}
-                  </Badge>
-                </div>
-                <div className="grid grid-cols-3 gap-4 text-sm mb-4">
-                  <div>
-                    <p className="text-muted-foreground">Amount</p>
-                    <p className="font-semibold">{invoice.amount.toLocaleString()} {invoice.currency}</p>
+                  <div className="grid grid-cols-3 gap-4 text-sm mb-4">
+                    <div>
+                      <p className="text-muted-foreground">Amount</p>
+                      <p className="font-semibold">{invoice.amount.toLocaleString()} {invoice.currency}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Due Date</p>
+                      <p className="font-semibold">{new Date(invoice.due_date).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Created</p>
+                      <p className="font-semibold">{new Date(invoice.created_at).toLocaleDateString()}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Due Date</p>
-                    <p className="font-semibold">{new Date(invoice.due_date).toLocaleDateString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Created</p>
-                    <p className="font-semibold">{new Date(invoice.created_at).toLocaleDateString()}</p>
-                  </div>
-                </div>
-                {invoice.status === 'draft' && (
                   <Button
                     onClick={() => sendInvoiceMutation.mutate(invoice.id)}
                     size="sm"
@@ -370,10 +364,102 @@ export const BillingManagement = () => {
                     <Send className="w-4 h-4 mr-2" />
                     Send to Organization
                   </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            ))}
+            {invoices?.filter((inv: any) => inv.status === 'draft').length === 0 && (
+              <p className="text-sm text-muted-foreground">No draft invoices</p>
+            )}
+          </div>
+
+          <div className="space-y-2 mt-6">
+            <h3 className="text-sm font-medium text-muted-foreground">Sent Invoices</h3>
+            {invoices?.filter((inv: any) => inv.status === 'sent' || inv.status === 'overdue').map((invoice: any) => (
+              <Card key={invoice.id} className="border-2">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-semibold">{invoice.invoice_number}</h3>
+                      <p className="text-sm text-muted-foreground">{invoice.organisations?.name}</p>
+                    </div>
+                    <Badge variant={invoice.status === 'overdue' ? 'destructive' : 'outline'}>
+                      {invoice.status}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Amount</p>
+                      <p className="font-semibold">{invoice.amount.toLocaleString()} {invoice.currency}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Due Date</p>
+                      <p className="font-semibold">{new Date(invoice.due_date).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Sent Date</p>
+                      <p className="font-semibold">{invoice.sent_at ? new Date(invoice.sent_at).toLocaleDateString() : '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Created</p>
+                      <p className="font-semibold">{new Date(invoice.created_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  {invoice.line_items && invoice.line_items.length > 0 && (
+                    <div className="mt-4 p-3 bg-muted rounded-lg">
+                      <p className="text-xs font-medium mb-2">Line Items</p>
+                      {invoice.line_items.map((item: any, idx: number) => (
+                        <div key={idx} className="flex justify-between text-xs py-1">
+                          <span className="capitalize">{item.role?.replace('_', ' ')}: {item.user_count} × {item.price_per_user?.toLocaleString()} {invoice.currency}</span>
+                          <span className="font-medium">{item.subtotal?.toLocaleString()} {invoice.currency}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+            {invoices?.filter((inv: any) => inv.status === 'sent' || inv.status === 'overdue').length === 0 && (
+              <p className="text-sm text-muted-foreground">No sent invoices</p>
+            )}
+          </div>
+
+          <div className="space-y-2 mt-6">
+            <h3 className="text-sm font-medium text-muted-foreground">Paid Invoices</h3>
+            {invoices?.filter((inv: any) => inv.status === 'paid').map((invoice: any) => (
+              <Card key={invoice.id} className="border-2 border-green-200">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-semibold">{invoice.invoice_number}</h3>
+                      <p className="text-sm text-muted-foreground">{invoice.organisations?.name}</p>
+                    </div>
+                    <Badge variant="default">{invoice.status}</Badge>
+                  </div>
+                  <div className="grid grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Amount</p>
+                      <p className="font-semibold">{invoice.amount.toLocaleString()} {invoice.currency}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Due Date</p>
+                      <p className="font-semibold">{new Date(invoice.due_date).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Paid Date</p>
+                      <p className="font-semibold">{invoice.paid_date ? new Date(invoice.paid_date).toLocaleDateString() : '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Created</p>
+                      <p className="font-semibold">{new Date(invoice.created_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {invoices?.filter((inv: any) => inv.status === 'paid').length === 0 && (
+              <p className="text-sm text-muted-foreground">No paid invoices</p>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
