@@ -147,6 +147,27 @@ export const FormsList = ({
         response_count: form.form_responses?.[0]?.count || 0,
       }));
 
+      // Cache all forms for offline use (field users only)
+      if (isFieldUser()) {
+        const { offlineStorage } = await import('@/lib/offlineStorage');
+        let cachedCount = 0;
+        for (const form of formsWithCount) {
+          try {
+            await offlineStorage.cacheForm(form);
+            cachedCount++;
+          } catch (error) {
+            console.error('Failed to cache form:', form.id, error);
+          }
+        }
+        
+        if (cachedCount > 0) {
+          toast({
+            title: "Forms ready for offline",
+            description: `${cachedCount} form(s) downloaded for offline use`,
+          });
+        }
+      }
+
       setInternalForms(formsWithCount);
     } catch (error: any) {
       console.error('Error loading forms:', error);

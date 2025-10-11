@@ -26,6 +26,11 @@ const FieldStaffLayout = () => {
 
     // Initialize auto-sync
     syncService.startAutoSync();
+    
+    // Auto-sync on mount if online
+    if (navigator.onLine) {
+      syncService.pushPendingSubmissions().catch(console.error);
+    }
   }, [user, navigate]);
 
   const handleLogout = async () => {

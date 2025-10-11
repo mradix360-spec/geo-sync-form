@@ -139,20 +139,48 @@ const FormSubmit = () => {
 
   const loadForm = async () => {
     try {
-      const { data, error } = await supabase
-        .from('forms')
-        .select('id, title, description, geometry_type, schema')
-        .eq('id', formId)
-        .single();
+      let formData = null;
+      
+      // Try to load from server first if online
+      if (navigator.onLine) {
+        const { data, error } = await supabase
+          .from('forms')
+          .select('id, title, description, geometry_type, schema')
+          .eq('id', formId)
+          .single();
 
-      if (error) throw error;
+        if (!error && data) {
+          formData = data;
+          // Cache for offline use
+          await offlineStorage.cacheForm(data);
+        }
+      }
+      
+      // If offline or server failed, try cache
+      if (!formData) {
+        formData = await offlineStorage.getCachedForm(formId!);
+        if (!formData) {
+          toast({
+            variant: "destructive",
+            title: "Form not available offline",
+            description: "Please connect to download this form",
+          });
+          handleBack();
+          return;
+        }
+        
+        toast({
+          title: "Offline Mode",
+          description: "Loaded form from cache",
+        });
+      }
       
       // Parse the schema JSON
       const parsedForm: Form = {
-        ...data,
-        schema: typeof data.schema === 'string' 
-          ? JSON.parse(data.schema) 
-          : data.schema as unknown as { fields: FormField[] }
+        ...formData,
+        schema: typeof formData.schema === 'string' 
+          ? JSON.parse(formData.schema) 
+          : formData.schema as unknown as { fields: FormField[] }
       };
       
       setForm(parsedForm);
