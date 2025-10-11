@@ -7,19 +7,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Loader2, Users } from "lucide-react";
+import { Plus, Trash2, Loader2, Users, UserCog } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { GroupMembersDialog } from "./GroupMembersDialog";
 
 interface Group {
   id: string;
   name: string;
   created_at: string;
   organisation_id: string;
+  form_group_members: Array<{ id: string }>;
 }
 
 export function GroupManagement() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [membersDialogOpen, setMembersDialogOpen] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [groupName, setGroupName] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -30,7 +35,12 @@ export function GroupManagement() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("form_groups")
-        .select("*")
+        .select(`
+          *,
+          form_group_members (
+            id
+          )
+        `)
         .eq("organisation_id", currentUser?.organisation_id)
         .order("created_at", { ascending: false });
 
@@ -104,6 +114,11 @@ export function GroupManagement() {
     deleteMutation.mutate(groupId);
   };
 
+  const handleManageMembers = (group: Group) => {
+    setSelectedGroup(group);
+    setMembersDialogOpen(true);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-12">
@@ -143,6 +158,7 @@ export function GroupManagement() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Group Name</TableHead>
+                  <TableHead>Members</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -152,9 +168,21 @@ export function GroupManagement() {
                   <TableRow key={group.id}>
                     <TableCell className="font-medium">{group.name}</TableCell>
                     <TableCell>
+                      <Badge variant="secondary">
+                        {group.form_group_members?.length || 0} members
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
                       {new Date(group.created_at).toLocaleDateString()}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right space-x-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleManageMembers(group)}
+                      >
+                        <UserCog className="h-4 w-4" />
+                      </Button>
                       <Button
                         size="sm"
                         variant="destructive"
@@ -200,6 +228,15 @@ export function GroupManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {selectedGroup && (
+        <GroupMembersDialog
+          open={membersDialogOpen}
+          onOpenChange={setMembersDialogOpen}
+          groupId={selectedGroup.id}
+          groupName={selectedGroup.name}
+        />
+      )}
     </>
   );
 }
