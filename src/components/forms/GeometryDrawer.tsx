@@ -167,19 +167,21 @@ const MapDrawer = ({
     },
   });
 
-  if (geometryType === 'point' && markerPosition) {
-    return <Marker position={markerPosition} />;
-  }
+  return (
+    <>
+      {geometryType === 'point' && markerPosition && (
+        <Marker position={markerPosition} />
+      )}
+      
+      {geometryType === 'linestring' && points.length > 0 && (
+        <Polyline positions={points} color="#3b82f6" weight={3} />
+      )}
 
-  if (geometryType === 'linestring' && points.length > 0) {
-    return <Polyline positions={points} color="#3b82f6" weight={3} />;
-  }
-
-  if (geometryType === 'polygon' && points.length > 0) {
-    return <Polygon positions={points} color="#3b82f6" fillOpacity={0.3} />;
-  }
-
-  return null;
+      {geometryType === 'polygon' && points.length > 0 && (
+        <Polygon positions={points} color="#3b82f6" fillOpacity={0.3} />
+      )}
+    </>
+  );
 };
 
 export const GeometryDrawer = ({ 
