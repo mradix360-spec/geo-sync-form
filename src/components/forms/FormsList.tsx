@@ -61,6 +61,25 @@ export const FormsList = ({
 
   const loadForms = async () => {
     try {
+      const { offlineStorage } = await import('@/lib/offlineStorage');
+
+      // If offline, immediately show cached forms
+      if (!navigator.onLine) {
+        const cachedForms = await offlineStorage.getCachedForms();
+        if (cachedForms?.length) {
+          setInternalForms(cachedForms);
+          toast({ title: 'Offline mode', description: 'Showing cached forms' });
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'No offline forms',
+            description: 'Connect to the internet to download your forms',
+          });
+          setInternalForms([]);
+        }
+        return;
+      }
+
       if (!currentUser?.id || !currentUser?.organisation_id) {
         setInternalForms([]);
         setInternalLoading(false);
@@ -149,7 +168,6 @@ export const FormsList = ({
 
       // Cache all forms for offline use (field users only)
       if (isFieldUser()) {
-        const { offlineStorage } = await import('@/lib/offlineStorage');
         let cachedCount = 0;
         for (const form of formsWithCount) {
           try {
@@ -171,11 +189,27 @@ export const FormsList = ({
       setInternalForms(formsWithCount);
     } catch (error: any) {
       console.error('Error loading forms:', error);
-      toast({
-        variant: "destructive",
-        title: "Error loading forms",
-        description: error.message,
-      });
+      // Fallback to cache on error
+      try {
+        const { offlineStorage } = await import('@/lib/offlineStorage');
+        const cachedForms = await offlineStorage.getCachedForms();
+        if (cachedForms?.length) {
+          setInternalForms(cachedForms);
+          toast({ title: 'Offline mode', description: 'Showing cached forms' });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Error loading forms",
+            description: error.message,
+          });
+        }
+      } catch (cacheError) {
+        toast({
+          variant: "destructive",
+          title: "Error loading forms",
+          description: error.message,
+        });
+      }
     } finally {
       setInternalLoading(false);
     }
