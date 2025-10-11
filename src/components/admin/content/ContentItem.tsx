@@ -8,9 +8,11 @@ interface ContentItemProps {
   type: 'form' | 'map' | 'dashboard';
   onView: (id: string) => void;
   onShare: (id: string, type: string) => void;
+  currentUserId?: string;
 }
 
-export function ContentItem({ item, type, onView, onShare }: ContentItemProps) {
+export function ContentItem({ item, type, onView, onShare, currentUserId }: ContentItemProps) {
+  const isOwner = item.created_by === currentUserId;
   const getShareIcon = (shareType?: string) => {
     switch (shareType) {
       case 'public':
@@ -79,13 +81,15 @@ export function ContentItem({ item, type, onView, onShare }: ContentItemProps) {
         >
           <Eye className="h-4 w-4" />
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => onShare(item.id, type)}
-        >
-          <Share2 className="h-4 w-4" />
-        </Button>
+        {isOwner && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onShare(item.id, type)}
+          >
+            <Share2 className="h-4 w-4" />
+          </Button>
+        )}
       </TableCell>
     </TableRow>
   );

@@ -428,6 +428,7 @@ export function ContentManagement() {
                         type={item.type}
                         onView={(id) => handleView(id, item.type)}
                         onShare={handleShare}
+                        currentUserId={currentUser?.id}
                       />
                     ))}
                   </TableBody>
