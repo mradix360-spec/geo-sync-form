@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline, Polygon, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import 'leaflet-draw/dist/leaflet.draw.css';
-import 'leaflet-draw';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Navigation, Pencil, MapPin, Trash2, Play, Square } from 'lucide-react';
+import { Navigation, Pencil, MapPin, Trash2, Play, Square, Edit } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { LocationAccuracy } from '@/components/shared/LocationAccuracy';
 
@@ -51,16 +49,12 @@ const GeometryInfo = ({ geometry }: { geometry: any }) => {
     if (geometry.type === 'Polygon') {
       const coords = geometry.coordinates[0] as [number, number][];
       
-      // Calculate area using shoelace formula (planar approximation)
       let area = 0;
       for (let i = 0; i < coords.length - 1; i++) {
         area += (coords[i][0] * coords[i + 1][1]) - (coords[i + 1][0] * coords[i][1]);
       }
-      area = Math.abs(area / 2);
-      // Convert to approximate square meters (rough conversion)
-      area = area * 111000 * 111000;
+      area = Math.abs(area / 2) * 111000 * 111000;
       
-      // Calculate perimeter
       let perimeter = 0;
       for (let i = 0; i < coords.length - 1; i++) {
         const p1 = L.latLng(coords[i][1], coords[i][0]);
@@ -87,31 +81,143 @@ const GeometryInfo = ({ geometry }: { geometry: any }) => {
 
   return (
     <div className="flex flex-wrap gap-2 mt-2">
-      {stats.area && (
-        <Badge variant="secondary">Area: {stats.area}</Badge>
-      )}
-      {stats.length && (
-        <Badge variant="secondary">Length: {stats.length}</Badge>
-      )}
-      {stats.perimeter && (
-        <Badge variant="secondary">Perimeter: {stats.perimeter}</Badge>
-      )}
+      {stats.area && <Badge variant="secondary">Area: {stats.area}</Badge>}
+      {stats.length && <Badge variant="secondary">Length: {stats.length}</Badge>}
+      {stats.perimeter && <Badge variant="secondary">Perimeter: {stats.perimeter}</Badge>}
       <Badge variant="outline">Vertices: {stats.vertices}</Badge>
     </div>
   );
 };
 
-const GPSStreamingControl = ({ 
-  onPoint, 
-  isStreaming, 
-  onToggleStreaming 
-}: { 
-  onPoint: (lat: number, lng: number, accuracy?: number) => void;
-  isStreaming: boolean;
-  onToggleStreaming: () => void;
-}) => {
-  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
+const DrawingControls = ({
+  geometryType,
+  inputMethod,
+  onAddPoint,
+  onClear,
+  onToggleStreaming,
+  isStreaming,
+  hasPoints,
+  currentLocation
+}: any) => {
+  return (
+    <Card className="absolute top-4 right-4 p-3 space-y-2 z-[1000] bg-background">
+      {inputMethod === 'vertex' ? (
+        <>
+          {geometryType === 'linestring' && (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={isStreaming ? 'destructive' : 'default'}
+                onClick={onToggleStreaming}
+              >
+                {isStreaming ? <Square className="w-4 h-4 mr-1" /> : <Play className="w-4 h-4 mr-1" />}
+                {isStreaming ? 'Stop' : 'Stream GPS'}
+              </Button>
+              {currentLocation && (
+                <LocationAccuracy accuracy={currentLocation.accuracy} />
+              )}
+            </div>
+          )}
+          {!isStreaming && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={onAddPoint}
+              className="w-full"
+            >
+              <MapPin className="w-4 h-4 mr-1" />
+              Add GPS Point
+            </Button>
+          )}
+        </>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Click on the map to add points
+        </p>
+      )}
+      {hasPoints && (
+        <Button
+          type="button"
+          size="sm"
+          variant="destructive"
+          onClick={onClear}
+          className="w-full"
+        >
+          <Trash2 className="w-4 h-4 mr-1" />
+          Clear
+        </Button>
+      )}
+    </Card>
+  );
+};
+
+const MapDrawer = ({ 
+  geometryType, 
+  inputMethod,
+  points,
+  onPointAdd,
+  markerPosition
+}: any) => {
+  useMapEvents({
+    click(e) {
+      if (inputMethod === 'sketch') {
+        onPointAdd(e.latlng.lat, e.latlng.lng);
+      }
+    },
+  });
+
+  if (geometryType === 'point' && markerPosition) {
+    return <Marker position={markerPosition} />;
+  }
+
+  if (geometryType === 'linestring' && points.length > 0) {
+    return <Polyline positions={points} color="#3b82f6" weight={3} />;
+  }
+
+  if (geometryType === 'polygon' && points.length > 0) {
+    return <Polygon positions={points} color="#3b82f6" fillOpacity={0.3} />;
+  }
+
+  return null;
+};
+
+export const GeometryDrawer = ({ 
+  geometryType, 
+  initialValue, 
+  onChange,
+  inputMethod = 'vertex'
+}: GeometryDrawerProps) => {
+  const [center, setCenter] = useState<[number, number]>([-6.7924, 39.2083]);
+  const [zoom] = useState(13);
+  const [points, setPoints] = useState<[number, number][]>([]);
+  const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<any>(null);
   const watchIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCenter([position.coords.latitude, position.coords.longitude]);
+        },
+        () => {}
+      );
+    }
+
+    // Load initial value
+    if (initialValue) {
+      if (initialValue.type === 'Point') {
+        const [lng, lat] = initialValue.coordinates;
+        setMarkerPosition([lat, lng]);
+      } else if (initialValue.type === 'LineString') {
+        setPoints(initialValue.coordinates.map((c: number[]) => [c[1], c[0]] as [number, number]));
+      } else if (initialValue.type === 'Polygon') {
+        setPoints(initialValue.coordinates[0].map((c: number[]) => [c[1], c[0]] as [number, number]));
+      }
+    }
+  }, [initialValue]);
 
   useEffect(() => {
     if (isStreaming) {
@@ -123,7 +229,7 @@ const GPSStreamingControl = ({
             accuracy: position.coords.accuracy
           };
           setCurrentLocation(location);
-          onPoint(location.lat, location.lng, location.accuracy);
+          handleAddPoint(location.lat, location.lng);
         },
         (error) => {
           toast({
@@ -131,7 +237,7 @@ const GPSStreamingControl = ({
             title: 'GPS Error',
             description: error.message
           });
-          onToggleStreaming();
+          setIsStreaming(false);
         },
         {
           enableHighAccuracy: true,
@@ -153,207 +259,44 @@ const GPSStreamingControl = ({
     };
   }, [isStreaming]);
 
-  return (
-    <div className="flex items-center gap-2">
-      <Button
-        type="button"
-        size="sm"
-        variant={isStreaming ? 'destructive' : 'default'}
-        onClick={onToggleStreaming}
-      >
-        {isStreaming ? <Square className="w-4 h-4 mr-1" /> : <Play className="w-4 h-4 mr-1" />}
-        {isStreaming ? 'Stop' : 'Stream GPS'}
-      </Button>
-      {currentLocation && (
-        <LocationAccuracy accuracy={currentLocation.accuracy} />
-      )}
-    </div>
-  );
-};
-
-const MapController = ({ 
-  geometryType,
-  inputMethod,
-  onGeometryChange,
-  initialGeometry
-}: any) => {
-  const map = useMap();
-  const drawnItemsRef = useRef<L.FeatureGroup>(new L.FeatureGroup());
-  const drawControlRef = useRef<L.Control.Draw | null>(null);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const streamingLayerRef = useRef<L.Polyline | null>(null);
-
-  useEffect(() => {
-    const drawnItems = drawnItemsRef.current;
-    map.addLayer(drawnItems);
-
-    // Load initial geometry if provided
-    if (initialGeometry) {
-      const layer = L.geoJSON(initialGeometry);
-      layer.eachLayer((l) => {
-        drawnItems.addLayer(l);
-      });
-    }
-
-    // Setup draw control for sketch mode
-    if (inputMethod === 'sketch') {
-      const drawControl = new L.Control.Draw({
-        edit: {
-          featureGroup: drawnItems
-        },
-        draw: {
-          marker: geometryType === 'point' ? {} : false,
-          polyline: geometryType === 'linestring' ? {
-            shapeOptions: {
-              color: '#3b82f6',
-              weight: 3
-            }
-          } : false,
-          polygon: geometryType === 'polygon' ? {
-            shapeOptions: {
-              color: '#3b82f6',
-              fillOpacity: 0.3
-            }
-          } : false,
-          circle: false,
-          rectangle: false,
-          circlemarker: false
-        }
-      });
-      
-      map.addControl(drawControl);
-      drawControlRef.current = drawControl;
-    }
-
-    // Event handlers
-    const handleCreated = (e: any) => {
-      const layer = e.layer;
-      drawnItems.addLayer(layer);
-      
-      let geojson: any = null;
-      if (layer instanceof L.Marker) {
-        const latlng = layer.getLatLng();
-        geojson = {
-          type: 'Point',
-          coordinates: [latlng.lng, latlng.lat]
-        };
-      } else if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
-        const latlngs = layer.getLatLngs() as L.LatLng[];
-        geojson = {
-          type: 'LineString',
-          coordinates: latlngs.map(ll => [ll.lng, ll.lat])
-        };
-      } else if (layer instanceof L.Polygon) {
-        const latlngs = layer.getLatLngs()[0] as L.LatLng[];
-        geojson = {
-          type: 'Polygon',
-          coordinates: [latlngs.map(ll => [ll.lng, ll.lat]).concat([[latlngs[0].lng, latlngs[0].lat]])]
-        };
-      }
-      
-      onGeometryChange(geojson);
-    };
-
-    const handleEdited = (e: any) => {
-      e.layers.eachLayer((layer: any) => {
-        let geojson: any = null;
-        
-        if (layer instanceof L.Marker) {
-          const latlng = layer.getLatLng();
-          geojson = {
-            type: 'Point',
-            coordinates: [latlng.lng, latlng.lat]
-          };
-        } else if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
-          const latlngs = layer.getLatLngs() as L.LatLng[];
-          geojson = {
-            type: 'LineString',
-            coordinates: latlngs.map(ll => [ll.lng, ll.lat])
-          };
-        } else if (layer instanceof L.Polygon) {
-          const latlngs = layer.getLatLngs()[0] as L.LatLng[];
-          geojson = {
-            type: 'Polygon',
-            coordinates: [latlngs.map(ll => [ll.lng, ll.lat]).concat([[latlngs[0].lng, latlngs[0].lat]])]
-          };
-        }
-        
-        if (geojson) {
-          onGeometryChange(geojson);
-        }
-      });
-    };
-
-    const handleDeleted = () => {
-      onGeometryChange(null);
-    };
-
-    map.on(L.Draw.Event.CREATED, handleCreated);
-    map.on(L.Draw.Event.EDITED, handleEdited);
-    map.on(L.Draw.Event.DELETED, handleDeleted);
-
-    return () => {
-      map.off(L.Draw.Event.CREATED, handleCreated);
-      map.off(L.Draw.Event.EDITED, handleEdited);
-      map.off(L.Draw.Event.DELETED, handleDeleted);
-      
-      if (drawControlRef.current) {
-        map.removeControl(drawControlRef.current);
-      }
-      map.removeLayer(drawnItems);
-    };
-  }, [map, geometryType, inputMethod]);
-
-  const handleGPSPoint = (lat: number, lng: number) => {
-    const drawnItems = drawnItemsRef.current;
-
+  const handleAddPoint = (lat: number, lng: number) => {
     if (geometryType === 'point') {
-      drawnItems.clearLayers();
-      const marker = L.marker([lat, lng]);
-      drawnItems.addLayer(marker);
-      
-      const geojson = {
+      setMarkerPosition([lat, lng]);
+      onChange({
         type: 'Point',
         coordinates: [lng, lat]
-      };
-      onGeometryChange(geojson);
-    } else if (geometryType === 'linestring' && isStreaming) {
-      if (!streamingLayerRef.current) {
-        streamingLayerRef.current = L.polyline([[lat, lng]], { color: '#3b82f6', weight: 3 });
-        drawnItems.addLayer(streamingLayerRef.current);
-      } else {
-        streamingLayerRef.current.addLatLng([lat, lng]);
-      }
-      
-      const latlngs = streamingLayerRef.current.getLatLngs() as L.LatLng[];
-      const geojson = {
+      });
+    } else if (geometryType === 'linestring') {
+      const newPoints = [...points, [lat, lng] as [number, number]];
+      setPoints(newPoints);
+      onChange({
         type: 'LineString',
-        coordinates: latlngs.map(ll => [ll.lng, ll.lat])
-      };
-      onGeometryChange(geojson);
+        coordinates: newPoints.map(p => [p[1], p[0]])
+      });
+    } else if (geometryType === 'polygon') {
+      const newPoints = [...points, [lat, lng] as [number, number]];
+      setPoints(newPoints);
+      if (newPoints.length >= 3) {
+        onChange({
+          type: 'Polygon',
+          coordinates: [newPoints.map(p => [p[1], p[0]]).concat([[newPoints[0][1], newPoints[0][0]]])]
+        });
+      }
     }
   };
 
-  const toggleStreaming = () => {
-    if (isStreaming && streamingLayerRef.current) {
-      streamingLayerRef.current = null;
-    }
-    setIsStreaming(!isStreaming);
-  };
-
-  const handleAddVertex = () => {
+  const handleGPSPoint = () => {
     if (!navigator.geolocation) {
       toast({
         variant: 'destructive',
-        title: 'GPS not available',
-        description: 'Geolocation is not supported by your device'
+        title: 'GPS not available'
       });
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        handleGPSPoint(position.coords.latitude, position.coords.longitude);
+        handleAddPoint(position.coords.latitude, position.coords.longitude);
       },
       (error) => {
         toast({
@@ -371,94 +314,34 @@ const MapController = ({
   };
 
   const handleClear = () => {
-    drawnItemsRef.current.clearLayers();
-    streamingLayerRef.current = null;
-    onGeometryChange(null);
+    setPoints([]);
+    setMarkerPosition(null);
+    onChange(null);
   };
 
-  return (
-    <>
-      {inputMethod === 'vertex' && (
-        <div className="leaflet-top leaflet-right" style={{ marginTop: '80px', marginRight: '10px' }}>
-          <Card className="p-3 space-y-2">
-            {geometryType === 'linestring' && (
-              <GPSStreamingControl 
-                onPoint={handleGPSPoint}
-                isStreaming={isStreaming}
-                onToggleStreaming={toggleStreaming}
-              />
-            )}
-            {!isStreaming && (
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleAddVertex}
-                className="w-full"
-              >
-                <MapPin className="w-4 h-4 mr-1" />
-                Add GPS Point
-              </Button>
-            )}
-            {drawnItemsRef.current && drawnItemsRef.current.getLayers().length > 0 && (
-              <Button
-                type="button"
-                size="sm"
-                variant="destructive"
-                onClick={handleClear}
-                className="w-full"
-              >
-                <Trash2 className="w-4 h-4 mr-1" />
-                Clear
-              </Button>
-            )}
-          </Card>
-        </div>
-      )}
-    </>
-  );
-};
-
-export const GeometryDrawer = ({ 
-  geometryType, 
-  initialValue, 
-  onChange,
-  inputMethod = 'sketch'
-}: GeometryDrawerProps) => {
-  const [center, setCenter] = useState<[number, number]>([-6.7924, 39.2083]);
-  const [zoom, setZoom] = useState(13);
-  const [currentGeometry, setCurrentGeometry] = useState<any>(initialValue);
-
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setCenter([position.coords.latitude, position.coords.longitude]);
-        },
-        () => {}
-      );
-    }
-  }, []);
-
-  const handleGeometryChange = (geojson: any) => {
-    setCurrentGeometry(geojson);
-    onChange(geojson);
-  };
+  const currentGeometry = markerPosition 
+    ? { type: 'Point', coordinates: [markerPosition[1], markerPosition[0]] }
+    : points.length > 0 
+    ? geometryType === 'linestring'
+      ? { type: 'LineString', coordinates: points.map(p => [p[1], p[0]]) }
+      : geometryType === 'polygon' && points.length >= 3
+      ? { type: 'Polygon', coordinates: [points.map(p => [p[1], p[0]]).concat([[points[0][1], points[0][0]]])] }
+      : null
+    : null;
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Badge variant="outline">
-            {inputMethod === 'sketch' ? <Pencil className="w-3 h-3 mr-1" /> : <Navigation className="w-3 h-3 mr-1" />}
-            {inputMethod === 'sketch' ? 'Sketch Mode' : 'Vertex Mode'}
-          </Badge>
-          <Badge variant="secondary">
-            {geometryType === 'point' ? 'Point' : geometryType === 'linestring' ? 'Line' : 'Polygon'}
-          </Badge>
-        </div>
+      <div className="flex items-center gap-2">
+        <Badge variant="outline">
+          {inputMethod === 'sketch' ? <Pencil className="w-3 h-3 mr-1" /> : <Navigation className="w-3 h-3 mr-1" />}
+          {inputMethod === 'sketch' ? 'Sketch Mode' : 'Vertex Mode'}
+        </Badge>
+        <Badge variant="secondary">
+          {geometryType === 'point' ? 'Point' : geometryType === 'linestring' ? 'Line' : 'Polygon'}
+        </Badge>
       </div>
 
-      <div className="border rounded-lg overflow-hidden" style={{ height: '400px' }}>
+      <div className="border rounded-lg overflow-hidden relative" style={{ height: '400px' }}>
         <MapContainer
           center={center}
           zoom={zoom}
@@ -469,25 +352,37 @@ export const GeometryDrawer = ({
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <MapController
+          <MapDrawer
             geometryType={geometryType}
             inputMethod={inputMethod}
-            onGeometryChange={handleGeometryChange}
-            initialGeometry={initialValue}
+            points={points}
+            onPointAdd={handleAddPoint}
+            markerPosition={markerPosition}
           />
         </MapContainer>
+        
+        <DrawingControls
+          geometryType={geometryType}
+          inputMethod={inputMethod}
+          onAddPoint={handleGPSPoint}
+          onClear={handleClear}
+          onToggleStreaming={() => setIsStreaming(!isStreaming)}
+          isStreaming={isStreaming}
+          hasPoints={points.length > 0 || markerPosition !== null}
+          currentLocation={currentLocation}
+        />
       </div>
 
       <GeometryInfo geometry={currentGeometry} />
       
       {inputMethod === 'sketch' && (
         <p className="text-xs text-muted-foreground">
-          Use the drawing tools on the map to {geometryType === 'point' ? 'place a marker' : geometryType === 'linestring' ? 'draw a line' : 'draw a polygon'}. You can edit or delete after drawing.
+          Click on the map to add points. {geometryType === 'polygon' && 'Add at least 3 points to create a polygon.'}
         </p>
       )}
       {inputMethod === 'vertex' && (
         <p className="text-xs text-muted-foreground">
-          Use the GPS button to add vertices from your current location. {geometryType === 'linestring' && 'Use Stream GPS for continuous tracking while walking.'}
+          Use GPS button to add vertices. {geometryType === 'linestring' && 'Use Stream GPS for continuous tracking.'}
         </p>
       )}
     </div>
