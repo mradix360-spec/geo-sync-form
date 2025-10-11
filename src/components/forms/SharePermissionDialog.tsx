@@ -144,8 +144,18 @@ export const SharePermissionDialog = ({
         .eq('object_type', objectType)
         .maybeSingle();
 
+      // Map share types to access_type values allowed by database constraint
+      let accessType = shareType;
+      if (shareType === 'group') {
+        accessType = 'org'; // Group sharing uses org access type with group_id set
+      } else if (shareType === 'other_organisation') {
+        accessType = 'org'; // Other org sharing uses org access type with shared_with_organisation set
+      } else if (shareType === 'organisation') {
+        accessType = 'org';
+      }
+
       const shareData: any = {
-        access_type: shareType,
+        access_type: accessType,
         organisation_id: user.organisation_id,
         shared_with_organisation: shareType === 'other_organisation' ? targetOrgId : null,
         group_id: shareType === 'group' ? selectedGroupId : null,

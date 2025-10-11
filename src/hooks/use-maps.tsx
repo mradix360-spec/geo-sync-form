@@ -71,7 +71,7 @@ export const useMaps = () => {
           if (mapShares.length === 0) return true;
 
           // Check for organization share
-          if (mapShares.some(s => s.access_type === 'organisation')) return true;
+          if (mapShares.some(s => s.access_type === 'org' && !s.group_id && !s.shared_with_user)) return true;
 
           // Check for group share
           if (mapShares.some(s => s.group_id && groupIds.includes(s.group_id))) return true;

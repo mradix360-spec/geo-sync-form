@@ -74,7 +74,7 @@ export const useDashboards = () => {
           if (dashboardShares.length === 0) return true;
 
           // Check for organization share
-          if (dashboardShares.some(s => s.access_type === 'organisation')) return true;
+          if (dashboardShares.some(s => s.access_type === 'org' && !s.group_id && !s.shared_with_user)) return true;
 
           // Check for group share
           if (dashboardShares.some(s => s.group_id && groupIds.includes(s.group_id))) return true;
