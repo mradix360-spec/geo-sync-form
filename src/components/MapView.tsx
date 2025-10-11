@@ -54,6 +54,8 @@ const MapView = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.MarkerClusterGroup | L.LayerGroup | null>(null);
+  const linesLayerRef = useRef<L.LayerGroup | null>(null);
+  const polygonsLayerRef = useRef<L.LayerGroup | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const heatCirclesRef = useRef<L.CircleMarker[]>([]);
   const measurementLayerRef = useRef<L.LayerGroup | null>(null);
@@ -88,11 +90,12 @@ const MapView = ({
       setHeatmapActive(false);
       toast.success('Heatmap disabled');
     } else {
-      // Create density visualization with circles
+      // Create density visualization with circles - only for Point geometries
       const circles: L.CircleMarker[] = [];
       responses.forEach((r) => {
+        const geomType = r?.geojson?.geometry?.type;
         const coords = r?.geojson?.geometry?.coordinates;
-        if (Array.isArray(coords) && coords.length >= 2) {
+        if (geomType === 'Point' && Array.isArray(coords) && coords.length >= 2) {
           const circle = L.circleMarker([coords[1], coords[0]], {
             radius: 15,
             fillColor: '#ff4444',
@@ -113,7 +116,7 @@ const MapView = ({
         setHeatmapActive(true);
         toast.success('Density view enabled');
       } else {
-        toast.error('No point data available');
+        toast.error('No point data available for heatmap');
       }
     }
   };
@@ -332,6 +335,10 @@ const MapView = ({
         });
 
         new ResetControl().addTo(mapRef.current);
+
+        // Initialize vector layers for lines and polygons
+        linesLayerRef.current = L.layerGroup().addTo(mapRef.current);
+        polygonsLayerRef.current = L.layerGroup().addTo(mapRef.current);
       }
     } catch (err) {
       console.error('Error initializing Leaflet map:', err);
@@ -343,6 +350,8 @@ const MapView = ({
           mapRef.current.remove();
           mapRef.current = null;
           markersLayerRef.current = null;
+          linesLayerRef.current = null;
+          polygonsLayerRef.current = null;
           tileLayerRef.current = null;
         }
       } catch (cleanupErr) {
@@ -400,94 +409,227 @@ const MapView = ({
     }
   }, [enableClustering]);
 
-  // Update markers when responses change
+  // Update markers and vector features when responses change
   useEffect(() => {
     try {
       const map = mapRef.current;
-      const layer = markersLayerRef.current;
-      if (!map || !layer) return;
+      const markersLayer = markersLayerRef.current;
+      const linesLayer = linesLayerRef.current;
+      const polygonsLayer = polygonsLayerRef.current;
+      if (!map || !markersLayer || !linesLayer || !polygonsLayer) return;
 
-      // Clear existing markers
-      layer.clearLayers();
+      // Clear existing layers
+      markersLayer.clearLayers();
+      linesLayer.clearLayers();
+      polygonsLayer.clearLayers();
 
-      const validCoords: [number, number][] = [];
+      const bounds = L.latLngBounds([]);
+      let hasBounds = false;
 
-      (responses || []).forEach((r, index) => {
-        const coords = r?.geojson?.geometry?.coordinates;
-        if (
-          Array.isArray(coords) &&
-          coords.length >= 2 &&
-          typeof coords[0] === 'number' &&
-          typeof coords[1] === 'number'
-        ) {
-          const latlng: [number, number] = [coords[1], coords[0]]; // [lat, lng]
-          validCoords.push(latlng);
+      // Helper: Convert [lng, lat] to [lat, lng]
+      const toLngLat = (coords: number[]): [number, number] => [coords[1], coords[0]];
 
-          const props = r?.geojson?.properties || {};
-          
-          // Create rich popup with all fields formatted
-          const popupHtml = `
-            <div class="min-w-[200px] max-w-[300px]">
-              ${r.layerTitle ? `<div class="font-bold text-base mb-2 pb-2 border-b">${r.layerTitle}</div>` : ''}
-              ${
-                Object.keys(props).length
-                  ? `<div class="space-y-2">${Object.entries(props)
-                      .filter(([k]) => k !== 'id')
-                      .map(([k, v]) => {
-                        const displayValue = Array.isArray(v) 
-                          ? v.join(', ') 
-                          : typeof v === 'object' 
-                            ? JSON.stringify(v) 
-                            : String(v);
-                        return `
-                          <div class="text-sm">
-                            <div class="font-semibold text-xs uppercase text-muted-foreground mb-0.5">${k}</div>
-                            <div class="text-foreground">${displayValue}</div>
-                          </div>
-                        `;
-                      })
-                      .join('')}</div>`
-                  : '<div class="text-sm text-muted-foreground">No data available</div>'
-              }
-            </div>`;
+      (responses || []).forEach((r) => {
+        const geometry = r?.geojson?.geometry;
+        const props = r?.geojson?.properties || {};
+        if (!geometry?.type || !geometry?.coordinates) return;
 
-          // Determine marker color based on style rules or default
-          let markerColor = r.color || '#3b82f6';
-          if (r.styleRule) {
-            if (r.styleRule.symbologyType === 'single') {
-              // Single symbol - use the first color
-              markerColor = r.styleRule.values[0]?.color || markerColor;
-            } else if (props[r.styleRule.field]) {
-              // Unique values - match field value
-              const fieldValue = String(props[r.styleRule.field]);
-              const matchingRule = r.styleRule.values.find(v => v.value === fieldValue);
-              if (matchingRule) {
-                markerColor = matchingRule.color;
-              }
+        // Create rich popup with all fields formatted
+        const popupHtml = `
+          <div class="min-w-[200px] max-w-[300px]">
+            ${r.layerTitle ? `<div class="font-bold text-base mb-2 pb-2 border-b">${r.layerTitle}</div>` : ''}
+            ${
+              Object.keys(props).length
+                ? `<div class="space-y-2">${Object.entries(props)
+                    .filter(([k]) => k !== 'id')
+                    .map(([k, v]) => {
+                      const displayValue = Array.isArray(v) 
+                        ? v.join(', ') 
+                        : typeof v === 'object' 
+                          ? JSON.stringify(v) 
+                          : String(v);
+                      return `
+                        <div class="text-sm">
+                          <div class="font-semibold text-xs uppercase text-muted-foreground mb-0.5">${k}</div>
+                          <div class="text-foreground">${displayValue}</div>
+                        </div>
+                      `;
+                    })
+                    .join('')}</div>`
+                : '<div class="text-sm text-muted-foreground">No data available</div>'
+            }
+          </div>`;
+
+        // Determine color based on style rules or default
+        let featureColor = r.color || '#3b82f6';
+        if (r.styleRule) {
+          if (r.styleRule.symbologyType === 'single') {
+            featureColor = r.styleRule.values[0]?.color || featureColor;
+          } else if (props[r.styleRule.field]) {
+            const fieldValue = String(props[r.styleRule.field]);
+            const matchingRule = r.styleRule.values.find(v => v.value === fieldValue);
+            if (matchingRule) {
+              featureColor = matchingRule.color;
             }
           }
+        }
 
-          const icon = createCustomIcon(
-            r.symbolType || 'circle',
-            markerColor,
-            r.symbolSize || 'medium'
-          );
+        // Process geometry by type
+        switch (geometry.type) {
+          case 'Point': {
+            const coords = geometry.coordinates;
+            if (Array.isArray(coords) && coords.length >= 2) {
+              const latlng = toLngLat(coords);
+              bounds.extend(latlng);
+              hasBounds = true;
 
-          L.marker(latlng, { icon }).addTo(layer).bindPopup(popupHtml, {
-            maxWidth: 300,
-            className: 'custom-popup'
-          });
+              const icon = createCustomIcon(
+                r.symbolType || 'circle',
+                featureColor,
+                r.symbolSize || 'medium'
+              );
+
+              L.marker(latlng, { icon }).addTo(markersLayer).bindPopup(popupHtml, {
+                maxWidth: 300,
+                className: 'custom-popup'
+              });
+            }
+            break;
+          }
+
+          case 'MultiPoint': {
+            const coords = geometry.coordinates;
+            if (Array.isArray(coords)) {
+              coords.forEach((coord: number[]) => {
+                if (Array.isArray(coord) && coord.length >= 2) {
+                  const latlng = toLngLat(coord);
+                  bounds.extend(latlng);
+                  hasBounds = true;
+
+                  const icon = createCustomIcon(
+                    r.symbolType || 'circle',
+                    featureColor,
+                    r.symbolSize || 'medium'
+                  );
+
+                  L.marker(latlng, { icon }).addTo(markersLayer).bindPopup(popupHtml, {
+                    maxWidth: 300,
+                    className: 'custom-popup'
+                  });
+                }
+              });
+            }
+            break;
+          }
+
+          case 'LineString': {
+            const coords = geometry.coordinates;
+            if (Array.isArray(coords) && coords.length > 0) {
+              const latlngs = coords.map((c: number[]) => toLngLat(c));
+              latlngs.forEach((ll: [number, number]) => {
+                bounds.extend(ll);
+                hasBounds = true;
+              });
+
+              L.polyline(latlngs, {
+                color: featureColor,
+                weight: 3,
+                opacity: 0.8,
+              }).addTo(linesLayer).bindPopup(popupHtml, {
+                maxWidth: 300,
+                className: 'custom-popup'
+              });
+            }
+            break;
+          }
+
+          case 'MultiLineString': {
+            const coords = geometry.coordinates;
+            if (Array.isArray(coords)) {
+              coords.forEach((line: number[][]) => {
+                const latlngs = line.map((c: number[]) => toLngLat(c));
+                latlngs.forEach((ll: [number, number]) => {
+                  bounds.extend(ll);
+                  hasBounds = true;
+                });
+
+                L.polyline(latlngs, {
+                  color: featureColor,
+                  weight: 3,
+                  opacity: 0.8,
+                }).addTo(linesLayer).bindPopup(popupHtml, {
+                  maxWidth: 300,
+                  className: 'custom-popup'
+                });
+              });
+            }
+            break;
+          }
+
+          case 'Polygon': {
+            const coords = geometry.coordinates;
+            if (Array.isArray(coords) && coords.length > 0) {
+              const rings = coords.map((ring: number[][]) => 
+                ring.map((c: number[]) => toLngLat(c))
+              );
+              
+              rings[0]?.forEach((ll: [number, number]) => {
+                bounds.extend(ll);
+                hasBounds = true;
+              });
+
+              L.polygon(rings as any, {
+                color: featureColor,
+                fillColor: featureColor,
+                fillOpacity: 0.2,
+                weight: 2,
+                opacity: 0.8,
+              }).addTo(polygonsLayer).bindPopup(popupHtml, {
+                maxWidth: 300,
+                className: 'custom-popup'
+              });
+            }
+            break;
+          }
+
+          case 'MultiPolygon': {
+            const coords = geometry.coordinates;
+            if (Array.isArray(coords)) {
+              coords.forEach((polygon: number[][][]) => {
+                const rings = polygon.map((ring: number[][]) => 
+                  ring.map((c: number[]) => toLngLat(c))
+                );
+                
+                rings[0]?.forEach((ll: [number, number]) => {
+                  bounds.extend(ll);
+                  hasBounds = true;
+                });
+
+                L.polygon(rings as any, {
+                  color: featureColor,
+                  fillColor: featureColor,
+                  fillOpacity: 0.2,
+                  weight: 2,
+                  opacity: 0.8,
+                }).addTo(polygonsLayer).bindPopup(popupHtml, {
+                  maxWidth: 300,
+                  className: 'custom-popup'
+                });
+              });
+            }
+            break;
+          }
         }
       });
 
-      if (validCoords.length > 0) {
-        const bounds = L.latLngBounds(validCoords);
+      // Fit map to all features
+      if (hasBounds && bounds.isValid()) {
         map.fitBounds(bounds, { padding: [50, 50] });
       } else {
         map.setView([0, 20], 3);
       }
     } catch (err) {
-      console.error('Error updating Leaflet markers:', err);
+      console.error('Error updating map features:', err);
     }
   }, [responses, enableClustering]);
 

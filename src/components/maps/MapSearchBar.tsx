@@ -39,9 +39,8 @@ export const MapSearchBar = ({ responses, onResultSelect }: MapSearchBarProps) =
 
     responses.forEach((response) => {
       const geojson = response.geojson as any;
-      if (!geojson?.geometry?.coordinates || !geojson?.properties) return;
+      if (!geojson?.geometry || !geojson?.properties) return;
 
-      const coords = geojson.geometry.coordinates;
       const props = geojson.properties;
 
       // Search through all properties
@@ -56,11 +55,28 @@ export const MapSearchBar = ({ responses, onResultSelect }: MapSearchBarProps) =
       });
 
       if (matchedFields.length > 0) {
+        // Calculate center of geometry bounds for any geometry type
+        let center: [number, number] = [0, 20]; // default
+        try {
+          const layer = (window as any).L.geoJSON(geojson);
+          const bounds = layer.getBounds();
+          if (bounds.isValid()) {
+            const c = bounds.getCenter();
+            center = [c.lat, c.lng];
+          }
+        } catch {
+          // Fallback for Point geometries
+          const coords = geojson.geometry.coordinates;
+          if (geojson.geometry.type === 'Point' && Array.isArray(coords) && coords.length >= 2) {
+            center = [coords[1], coords[0]];
+          }
+        }
+
         foundResults.push({
           id: props.id || Math.random().toString(),
           title: matchedFields[0] || 'Unnamed',
           subtitle: matchedFields.slice(1, 3).join(' • '),
-          coordinates: [coords[1], coords[0]], // [lat, lng]
+          coordinates: center,
           layerTitle: response.layerTitle || 'Unknown Layer',
           properties: props,
         });
