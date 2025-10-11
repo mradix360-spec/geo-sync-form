@@ -455,18 +455,8 @@ const FormSubmit = () => {
         }
       };
 
-      // Try to submit online
-      const { error } = await supabase
-        .from('form_responses')
-        .insert({
-          form_id: formId,
-          user_id: user?.id,
-          geojson,
-          client_id: clientId,
-          synced: navigator.onLine,
-        });
-
-      if (error && !navigator.onLine) {
+      // Check if offline first
+      if (!navigator.onLine) {
         // Store offline with client_id
         await offlineStorage.addSubmission({
           id: clientId,
@@ -479,8 +469,34 @@ const FormSubmit = () => {
           title: "Saved offline",
           description: "Your submission will sync when online",
         });
-      } else if (error) {
-        throw error;
+        handleBack();
+        return;
+      }
+
+      // Try to submit online
+      const { error } = await supabase
+        .from('form_responses')
+        .insert({
+          form_id: formId,
+          user_id: user?.id,
+          geojson,
+          client_id: clientId,
+          synced: true,
+        });
+
+      if (error) {
+        // If online submit fails, store offline as backup
+        await offlineStorage.addSubmission({
+          id: clientId,
+          formId: formId!,
+          geojson,
+          timestamp: Date.now(),
+          synced: false,
+        });
+        toast({
+          title: "Saved offline",
+          description: "Submit failed, will sync when possible",
+        });
       } else {
         toast({
           title: "Form submitted!",
@@ -490,11 +506,42 @@ const FormSubmit = () => {
 
       handleBack();
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error submitting form",
-        description: error.message,
-      });
+      // Fallback to offline storage on any error
+      try {
+        const clientId = `${user?.id || 'anonymous'}_${formId}_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+        const geojson = {
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: [location.lng, location.lat]
+          },
+          properties: {
+            ...formData,
+            ...fileUrls,
+            _client_id: clientId
+          }
+        };
+        
+        await offlineStorage.addSubmission({
+          id: clientId,
+          formId: formId!,
+          geojson,
+          timestamp: Date.now(),
+          synced: false,
+        });
+        
+        toast({
+          title: "Saved offline",
+          description: "Your submission will sync when online",
+        });
+        handleBack();
+      } catch (offlineError) {
+        toast({
+          variant: "destructive",
+          title: "Error submitting form",
+          description: error.message,
+        });
+      }
     } finally {
       setSubmitting(false);
     }
