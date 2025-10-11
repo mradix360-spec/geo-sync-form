@@ -50,7 +50,7 @@ export const useForms = () => {
           return;
         }
 
-        // Get only assigned forms
+        // Get only assigned forms from user's organization
         const { data: assignedForms, error: formsError } = await supabase
           .from('forms')
           .select(`
@@ -58,6 +58,7 @@ export const useForms = () => {
             form_responses(count)
           `)
           .in('id', assignedFormIds)
+          .eq('organisation_id', user.organisation_id)
           .order('created_at', { ascending: false });
 
         if (formsError) throw formsError;
@@ -72,62 +73,19 @@ export const useForms = () => {
         return;
       }
 
-      // For non-field staff, get all accessible forms
-      // Get user's groups
-      const { data: userGroups } = await supabase
-        .from('form_group_members')
-        .select('group_id')
-        .eq('user_id', user.id);
-      
-      const groupIds = userGroups?.map(g => g.group_id) || [];
-
-      // Get all forms with response count
+      // For non-field staff, get forms from their organization only
       const { data: allForms, error: formsError } = await supabase
         .from('forms')
         .select(`
           *,
           form_responses(count)
         `)
+        .eq('organisation_id', user.organisation_id)
         .order('created_at', { ascending: false });
 
       if (formsError) throw formsError;
 
-      // Get shares for these forms
-      const formIds = allForms?.map(f => f.id) || [];
-      const { data: shares } = await supabase
-        .from('shares')
-        .select('*')
-        .eq('object_type', 'form')
-        .in('object_id', formIds);
-
-      // Filter forms based on visibility rules
-      const visibleForms = allForms?.filter(form => {
-        // 1. User created it
-        if (form.created_by === user.id) return true;
-
-        // 2. Form is in user's organization
-        if (form.organisation_id === user.organisation_id) {
-          // Check if there's a share for this
-          const formShares = shares?.filter(s => s.object_id === form.id) || [];
-          
-          // If no shares, org can see it
-          if (formShares.length === 0) return true;
-
-          // Check for organization share
-          if (formShares.some(s => s.shared_with_organisation === user.organisation_id)) return true;
-
-          // Check for group share
-          if (formShares.some(s => s.group_id && groupIds.includes(s.group_id))) return true;
-
-          // Check for public access
-          if (formShares.some(s => s.access_type === 'public')) return true;
-
-          // Check for direct user share
-          if (formShares.some(s => s.shared_with_user === user.id)) return true;
-        }
-
-        return false;
-      }) || [];
+      const visibleForms = allForms || [];
 
       const formsWithCount = visibleForms.map(form => ({
         ...form,

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Form {
   id: string;
@@ -20,11 +21,18 @@ export const useFormsByShare = (shareFilter: string | null = null) => {
   const [forms, setForms] = useState<Form[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
   const loadForms = async () => {
     try {
       setLoading(true);
       setError(null);
+
+      if (!user?.organisation_id) {
+        setForms([]);
+        setLoading(false);
+        return;
+      }
 
       const { data, error } = await supabase.rpc('get_forms_by_share_type', {
         share_filter: shareFilter,
@@ -32,7 +40,12 @@ export const useFormsByShare = (shareFilter: string | null = null) => {
 
       if (error) throw error;
 
-      setForms(data || []);
+      // Filter to only show forms from user's organization
+      const orgForms = (data || []).filter(
+        (form: Form) => form.organisation_id === user.organisation_id
+      );
+
+      setForms(orgForms);
     } catch (error: any) {
       console.error('Error loading forms:', error);
       setError(error.message);
@@ -48,7 +61,7 @@ export const useFormsByShare = (shareFilter: string | null = null) => {
 
   useEffect(() => {
     loadForms();
-  }, [shareFilter]);
+  }, [shareFilter, user?.organisation_id]);
 
   return { forms, loading, error, refetch: loadForms };
 };
