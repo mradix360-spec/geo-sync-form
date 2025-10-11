@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Polyline, Polygon, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline, Polygon, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Button } from '@/components/ui/button';
@@ -159,14 +159,7 @@ const MapDrawer = ({
   onPointAdd,
   markerPosition
 }: any) => {
-  useMapEvents({
-    click(e) {
-      if (inputMethod === 'sketch') {
-        onPointAdd(e.latlng.lat, e.latlng.lng);
-      }
-    },
-  });
-
+  // Pure rendering component (no hooks)
   return (
     <>
       {geometryType === 'point' && markerPosition && (
@@ -176,7 +169,7 @@ const MapDrawer = ({
       {geometryType === 'linestring' && points.length > 0 && (
         <Polyline positions={points} color="#3b82f6" weight={3} />
       )}
-
+  
       {geometryType === 'polygon' && points.length > 0 && (
         <Polygon positions={points} color="#3b82f6" fillOpacity={0.3} />
       )}
@@ -196,7 +189,8 @@ export const GeometryDrawer = ({
   const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<any>(null);
-  const watchIdRef = useRef<number | null>(null);
+const watchIdRef = useRef<number | null>(null);
+  const [leafletMap, setLeafletMap] = useState<L.Map | null>(null);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -287,6 +281,20 @@ export const GeometryDrawer = ({
     }
   };
 
+  // Register map click for sketch mode
+  useEffect(() => {
+    if (!leafletMap) return;
+    const onClick = (e: any) => {
+      if (inputMethod === 'sketch') {
+        handleAddPoint(e.latlng.lat, e.latlng.lng);
+      }
+    };
+    leafletMap.on('click', onClick);
+    return () => {
+      leafletMap.off('click', onClick);
+    };
+  }, [leafletMap, inputMethod]);
+  
   const handleGPSPoint = () => {
     if (!navigator.geolocation) {
       toast({
