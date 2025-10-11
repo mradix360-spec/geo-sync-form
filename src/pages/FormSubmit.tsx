@@ -143,16 +143,20 @@ const FormSubmit = () => {
       
       // Try to load from server first if online
       if (navigator.onLine) {
-        const { data, error } = await supabase
-          .from('forms')
-          .select('id, title, description, geometry_type, schema')
-          .eq('id', formId)
-          .single();
+        try {
+          const { data, error } = await supabase
+            .from('forms')
+            .select('id, title, description, geometry_type, schema')
+            .eq('id', formId)
+            .single();
 
-        if (!error && data) {
-          formData = data;
-          // Cache for offline use
-          await offlineStorage.cacheForm(data);
+          if (!error && data) {
+            formData = data;
+            // Cache for offline use
+            await offlineStorage.cacheForm(data);
+          }
+        } catch (serverError) {
+          console.log('Server fetch failed, will try cache:', serverError);
         }
       }
       
