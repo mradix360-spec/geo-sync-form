@@ -9,6 +9,9 @@ interface ContentFiltersProps {
   onTypeFilterChange: (value: string) => void;
   shareFilter: string;
   onShareFilterChange: (value: string) => void;
+  groupFilter: string;
+  onGroupFilterChange: (value: string) => void;
+  groups: Array<{ id: string; name: string }>;
 }
 
 export function ContentFilters({
@@ -18,10 +21,13 @@ export function ContentFilters({
   onTypeFilterChange,
   shareFilter,
   onShareFilterChange,
+  groupFilter,
+  onGroupFilterChange,
+  groups
 }: ContentFiltersProps) {
   return (
-    <div className="flex gap-4 mb-6">
-      <div className="relative flex-1">
+    <div className="flex flex-wrap gap-4 mb-6">
+      <div className="relative flex-1 min-w-[200px]">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search content..."
@@ -52,6 +58,23 @@ export function ContentFilters({
           <SelectItem value="private">Private</SelectItem>
           <SelectItem value="org">Organization</SelectItem>
           <SelectItem value="public">Public</SelectItem>
+          <SelectItem value="group">Group</SelectItem>
+          <SelectItem value="user">User</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Select value={groupFilter} onValueChange={onGroupFilterChange}>
+        <SelectTrigger className="w-[200px]">
+          <SelectValue placeholder="Filter by Group" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Groups</SelectItem>
+          <SelectItem value="my-groups">My Groups Only</SelectItem>
+          {groups.map((group) => (
+            <SelectItem key={group.id} value={group.id}>
+              {group.name}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
     </div>

@@ -23,6 +23,7 @@ interface ContentItem {
   is_published?: boolean;
   is_public?: boolean;
   share_type?: string;
+  group_ids?: string[];
 }
 
 export function ContentManagement() {
@@ -33,8 +34,28 @@ export function ContentManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [shareFilter, setShareFilter] = useState("all");
+  const [groupFilter, setGroupFilter] = useState("all");
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<{ id: string; type: string } | null>(null);
+
+  // Fetch user's groups
+  const { data: userGroups = [] } = useQuery({
+    queryKey: ["user-groups", currentUser?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('form_group_members')
+        .select('group_id, form_groups(id, name)')
+        .eq('user_id', currentUser?.id);
+
+      if (error) throw error;
+      
+      return data?.map(item => ({
+        id: (item.form_groups as any)?.id,
+        name: (item.form_groups as any)?.name
+      })).filter(g => g.id && g.name) || [];
+    },
+    enabled: !!currentUser?.id,
+  });
 
   // Fetch forms with comprehensive sharing logic
   const { data: forms, isLoading: formsLoading } = useQuery({
@@ -89,6 +110,10 @@ export function ContentManagement() {
       return visibleForms.map(form => {
         const formShares = shares?.filter(s => s.object_id === form.id) || [];
         let share_type = 'private';
+        const group_ids = formShares
+          .filter(s => s.group_id)
+          .map(s => s.group_id)
+          .filter(Boolean) as string[];
         
         if (formShares.some(s => s.access_type === 'public')) {
           share_type = 'public';
@@ -100,7 +125,7 @@ export function ContentManagement() {
           share_type = 'user';
         }
 
-        return { ...form, share_type };
+        return { ...form, share_type, group_ids };
       });
     },
     enabled: !!currentUser?.id && !!currentUser?.organisation_id,
@@ -159,6 +184,10 @@ export function ContentManagement() {
       return visibleMaps.map(map => {
         const mapShares = shares?.filter(s => s.object_id === map.id) || [];
         let share_type = 'private';
+        const group_ids = mapShares
+          .filter(s => s.group_id)
+          .map(s => s.group_id)
+          .filter(Boolean) as string[];
         
         if (mapShares.some(s => s.access_type === 'public')) {
           share_type = 'public';
@@ -170,7 +199,7 @@ export function ContentManagement() {
           share_type = 'user';
         }
 
-        return { ...map, share_type };
+        return { ...map, share_type, group_ids };
       });
     },
     enabled: !!currentUser?.id && !!currentUser?.organisation_id,
@@ -232,11 +261,16 @@ export function ContentManagement() {
 
       // Add share_type to each dashboard
       return visibleDashboards.map(dashboard => {
+        const dashboardShares = shares?.filter(s => s.object_id === dashboard.id) || [];
+        const group_ids = dashboardShares
+          .filter(s => s.group_id)
+          .map(s => s.group_id)
+          .filter(Boolean) as string[];
+        
         if (dashboard.is_public) {
-          return { ...dashboard, share_type: 'public' };
+          return { ...dashboard, share_type: 'public', group_ids };
         }
 
-        const dashboardShares = shares?.filter(s => s.object_id === dashboard.id) || [];
         let share_type = 'private';
         
         if (dashboardShares.some(s => s.access_type === 'public')) {
@@ -249,7 +283,7 @@ export function ContentManagement() {
           share_type = 'user';
         }
 
-        return { ...dashboard, share_type };
+        return { ...dashboard, share_type, group_ids };
       });
     },
     enabled: !!currentUser?.id && !!currentUser?.organisation_id,
@@ -270,6 +304,8 @@ export function ContentManagement() {
 
   // Filter content
   const filteredContent = useMemo(() => {
+    const userGroupIds = userGroups.map(g => g.id);
+    
     return allContent.filter(item => {
       // Search filter
       const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -281,9 +317,19 @@ export function ContentManagement() {
       // Share filter
       const matchesShare = shareFilter === 'all' || item.share_type === shareFilter;
       
-      return matchesSearch && matchesType && matchesShare;
+      // Group filter
+      let matchesGroup = true;
+      if (groupFilter === 'my-groups') {
+        // Show only content shared with groups user is a member of
+        matchesGroup = item.group_ids?.some((gid: string) => userGroupIds.includes(gid)) || false;
+      } else if (groupFilter !== 'all') {
+        // Show content shared with specific group
+        matchesGroup = item.group_ids?.includes(groupFilter) || false;
+      }
+      
+      return matchesSearch && matchesType && matchesShare && matchesGroup;
     });
-  }, [allContent, searchQuery, typeFilter, shareFilter]);
+  }, [allContent, searchQuery, typeFilter, shareFilter, groupFilter, userGroups]);
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -400,6 +446,9 @@ export function ContentManagement() {
               onTypeFilterChange={setTypeFilter}
               shareFilter={shareFilter}
               onShareFilterChange={setShareFilter}
+              groupFilter={groupFilter}
+              onGroupFilterChange={setGroupFilter}
+              groups={userGroups}
             />
 
             {filteredContent.length === 0 ? (
