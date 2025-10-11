@@ -90,36 +90,28 @@ export function ContentManagement() {
         .select('*')
         .eq('object_type', 'form');
 
-      // Filter forms based on visibility
+      // Filter forms based on visibility - only show content from user's organization
       const visibleForms = allForms?.filter(form => {
-        // Own organization's forms
-        if (form.organisation_id === currentUser.organisation_id) {
-          // Admins can see all content in their organization
-          if (isAdmin()) {
-            return true;
-          }
-          
-          // Check if form has shares
-          const formShares = shares?.filter(s => s.object_id === form.id) || [];
-          
-          // If no shares exist (private), only show to creator
-          if (formShares.length === 0) {
-            return form.created_by === currentUser.id;
-          }
-          
-          // If shares exist, show to everyone in org
-          return true;
+        // Only show forms from user's organization
+        if (form.organisation_id !== currentUser.organisation_id) {
+          return false;
         }
 
-        // Check shares for forms from other organizations
+        // Admins can see all content in their organization
+        if (isAdmin()) {
+          return true;
+        }
+        
+        // Check if form has shares
         const formShares = shares?.filter(s => s.object_id === form.id) || [];
-        return formShares.some(share => {
-          if (share.access_type === 'public') return true;
-          if (share.shared_with_organisation === currentUser.organisation_id) return true;
-          if (share.shared_with_user === currentUser.id) return true;
-          if (share.group_id && groupIds.includes(share.group_id)) return true;
-          return false;
-        });
+        
+        // If no shares exist (private), only show to creator
+        if (formShares.length === 0) {
+          return form.created_by === currentUser.id;
+        }
+        
+        // If shares exist, show to everyone in org
+        return true;
       }) || [];
 
       // Add share_type to each form
@@ -178,36 +170,28 @@ export function ContentManagement() {
         .select('*')
         .eq('object_type', 'map');
 
-      // Filter maps based on visibility
+      // Filter maps based on visibility - only show content from user's organization
       const visibleMaps = allMaps?.filter(map => {
-        // Own organization's maps
-        if (map.organisation_id === currentUser.organisation_id) {
-          // Admins can see all content in their organization
-          if (isAdmin()) {
-            return true;
-          }
-          
-          // Check if map has shares
-          const mapShares = shares?.filter(s => s.object_id === map.id) || [];
-          
-          // If no shares exist (private), only show to creator
-          if (mapShares.length === 0) {
-            return map.created_by === currentUser.id;
-          }
-          
-          // If shares exist, show to everyone in org
-          return true;
+        // Only show maps from user's organization
+        if (map.organisation_id !== currentUser.organisation_id) {
+          return false;
         }
 
-        // Check shares for maps from other organizations
+        // Admins can see all content in their organization
+        if (isAdmin()) {
+          return true;
+        }
+        
+        // Check if map has shares
         const mapShares = shares?.filter(s => s.object_id === map.id) || [];
-        return mapShares.some(share => {
-          if (share.access_type === 'public') return true;
-          if (share.shared_with_organisation === currentUser.organisation_id) return true;
-          if (share.shared_with_user === currentUser.id) return true;
-          if (share.group_id && groupIds.includes(share.group_id)) return true;
-          return false;
-        });
+        
+        // If no shares exist (private), only show to creator
+        if (mapShares.length === 0) {
+          return map.created_by === currentUser.id;
+        }
+        
+        // If shares exist, show to everyone in org
+        return true;
       }) || [];
 
       // Add share_type to each map
@@ -266,46 +250,33 @@ export function ContentManagement() {
         .select('*')
         .eq('object_type', 'dashboard');
 
-      // Filter dashboards based on visibility
+      // Filter dashboards based on visibility - only show content from user's organization
       const visibleDashboards = allDashboards?.filter(dashboard => {
-        // Own organization's dashboards
-        if (dashboard.organisation_id === currentUser.organisation_id) {
-          // Admins can see all content in their organization
-          if (isAdmin()) {
-            return true;
-          }
-          
-          // Check if dashboard is public
-          if (dashboard.is_public) {
-            return true;
-          }
-          
-          // Check if dashboard has shares
-          const dashboardShares = shares?.filter(s => s.object_id === dashboard.id) || [];
-          
-          // If no shares exist (private), only show to creator
-          if (dashboardShares.length === 0) {
-            return dashboard.created_by === currentUser.id;
-          }
-          
-          // If shares exist, show to everyone in org
-          return true;
+        // Only show dashboards from user's organization
+        if (dashboard.organisation_id !== currentUser.organisation_id) {
+          return false;
         }
 
-        // Public dashboards from other orgs
+        // Admins can see all content in their organization
+        if (isAdmin()) {
+          return true;
+        }
+        
+        // Check if dashboard is public
         if (dashboard.is_public) {
           return true;
         }
-
-        // Check shares for dashboards from other organizations
+        
+        // Check if dashboard has shares
         const dashboardShares = shares?.filter(s => s.object_id === dashboard.id) || [];
-        return dashboardShares.some(share => {
-          if (share.access_type === 'public') return true;
-          if (share.shared_with_organisation === currentUser.organisation_id) return true;
-          if (share.shared_with_user === currentUser.id) return true;
-          if (share.group_id && groupIds.includes(share.group_id)) return true;
-          return false;
-        });
+        
+        // If no shares exist (private), only show to creator
+        if (dashboardShares.length === 0) {
+          return dashboard.created_by === currentUser.id;
+        }
+        
+        // If shares exist, show to everyone in org
+        return true;
       }) || [];
 
       // Add share_type to each dashboard
