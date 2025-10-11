@@ -53,6 +53,9 @@ export const SyncStatus = () => {
           title: 'Sync Complete',
           description: `Successfully synced ${results.success} submission(s)`,
         });
+        
+        // Trigger stats refresh event
+        window.dispatchEvent(new CustomEvent('stats-refresh'));
       }
       
       if (results.failed > 0) {

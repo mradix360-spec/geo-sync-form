@@ -18,6 +18,14 @@ export const FieldStats = () => {
     if (user) {
       loadStats();
     }
+    
+    // Listen for sync completion to refresh stats
+    const handleRefresh = () => loadStats();
+    window.addEventListener('stats-refresh', handleRefresh);
+    
+    return () => {
+      window.removeEventListener('stats-refresh', handleRefresh);
+    };
   }, [user]);
 
   const loadStats = async () => {
