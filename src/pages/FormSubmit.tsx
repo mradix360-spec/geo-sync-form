@@ -176,11 +176,7 @@ const FormSubmit = () => {
           handleBack();
           return;
         }
-        
-        toast({
-          title: "Offline Mode",
-          description: "Loaded form from cache",
-        });
+        // Form loaded from cache - no notification needed for smooth UX
       }
       
       // Parse the schema JSON

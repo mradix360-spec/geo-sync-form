@@ -68,7 +68,7 @@ export const FormsList = ({
         const cachedForms = await offlineStorage.getCachedForms();
         if (cachedForms?.length) {
           setInternalForms(cachedForms);
-          toast({ title: 'Offline mode', description: 'Showing cached forms' });
+          // Silent - no notification needed
         } else {
           toast({
             variant: 'destructive',
@@ -166,23 +166,14 @@ export const FormsList = ({
         response_count: form.form_responses?.[0]?.count || 0,
       }));
 
-      // Cache all forms for offline use (field users only)
+      // Cache all forms for offline use (field users only) - silent operation
       if (isFieldUser()) {
-        let cachedCount = 0;
         for (const form of formsWithCount) {
           try {
             await offlineStorage.cacheForm(form);
-            cachedCount++;
           } catch (error) {
             console.error('Failed to cache form:', form.id, error);
           }
-        }
-        
-        if (cachedCount > 0) {
-          toast({
-            title: "Forms ready for offline",
-            description: `${cachedCount} form(s) downloaded for offline use`,
-          });
         }
       }
 
@@ -195,7 +186,7 @@ export const FormsList = ({
         const cachedForms = await offlineStorage.getCachedForms();
         if (cachedForms?.length) {
           setInternalForms(cachedForms);
-          toast({ title: 'Offline mode', description: 'Showing cached forms' });
+          // Silent fallback to cache
         } else {
           toast({
             variant: "destructive",
