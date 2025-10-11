@@ -98,6 +98,10 @@ const FormSubmit = () => {
       handleBack();
       return;
     }
+    
+    // Initialize offline storage
+    offlineStorage.init().catch(console.error);
+    
     loadForm();
     captureLocation();
 
