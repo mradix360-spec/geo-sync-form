@@ -22,6 +22,9 @@ interface ResponseWithSymbol {
   styleRule?: StyleRule;
   layerTitle?: string;
   layerId?: string;
+  lineWeight?: number;
+  lineStyle?: 'solid' | 'dashed';
+  fillOpacity?: number;
 }
 
 interface MapViewProps {
@@ -531,11 +534,17 @@ const MapView = ({
                 hasBounds = true;
               });
 
-              L.polyline(latlngs, {
+              const lineOptions: L.PolylineOptions = {
                 color: featureColor,
-                weight: 3,
+                weight: r.lineWeight || 3,
                 opacity: 0.8,
-              }).addTo(linesLayer).bindPopup(popupHtml, {
+              };
+
+              if (r.lineStyle === 'dashed') {
+                lineOptions.dashArray = '10, 10';
+              }
+
+              L.polyline(latlngs, lineOptions).addTo(linesLayer).bindPopup(popupHtml, {
                 maxWidth: 300,
                 className: 'custom-popup'
               });
@@ -553,11 +562,17 @@ const MapView = ({
                   hasBounds = true;
                 });
 
-                L.polyline(latlngs, {
+                const lineOptions: L.PolylineOptions = {
                   color: featureColor,
-                  weight: 3,
+                  weight: r.lineWeight || 3,
                   opacity: 0.8,
-                }).addTo(linesLayer).bindPopup(popupHtml, {
+                };
+
+                if (r.lineStyle === 'dashed') {
+                  lineOptions.dashArray = '10, 10';
+                }
+
+                L.polyline(latlngs, lineOptions).addTo(linesLayer).bindPopup(popupHtml, {
                   maxWidth: 300,
                   className: 'custom-popup'
                 });
@@ -581,7 +596,7 @@ const MapView = ({
               L.polygon(rings as any, {
                 color: featureColor,
                 fillColor: featureColor,
-                fillOpacity: 0.2,
+                fillOpacity: r.fillOpacity !== undefined ? r.fillOpacity : 0.2,
                 weight: 2,
                 opacity: 0.8,
               }).addTo(polygonsLayer).bindPopup(popupHtml, {
@@ -608,7 +623,7 @@ const MapView = ({
                 L.polygon(rings as any, {
                   color: featureColor,
                   fillColor: featureColor,
-                  fillOpacity: 0.2,
+                  fillOpacity: r.fillOpacity !== undefined ? r.fillOpacity : 0.2,
                   weight: 2,
                   opacity: 0.8,
                 }).addTo(polygonsLayer).bindPopup(popupHtml, {

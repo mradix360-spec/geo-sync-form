@@ -33,10 +33,14 @@ interface MapLayer {
   id: string;
   formId: string;
   formTitle: string;
+  geometryType: string;
   visible: boolean;
   color: string;
   symbolType?: SymbolType;
   symbolSize?: SymbolSize;
+  lineWeight?: number;
+  lineStyle?: 'solid' | 'dashed';
+  fillOpacity?: number;
   styleRule?: StyleRule;
   responses?: any[];
 }
@@ -50,6 +54,9 @@ interface MapLayerPanelProps {
   onChangeSymbol: (layerId: string, symbolType: SymbolType) => void;
   onChangeSize: (layerId: string, symbolSize: SymbolSize) => void;
   onChangeStyleRule: (layerId: string, styleRule: StyleRule | undefined) => void;
+  onChangeLineWeight: (layerId: string, lineWeight: number) => void;
+  onChangeLineStyle: (layerId: string, lineStyle: 'solid' | 'dashed') => void;
+  onChangeFillOpacity: (layerId: string, fillOpacity: number) => void;
 }
 
 export const MapLayerPanel = ({
@@ -61,6 +68,9 @@ export const MapLayerPanel = ({
   onChangeSymbol,
   onChangeSize,
   onChangeStyleRule,
+  onChangeLineWeight,
+  onChangeLineStyle,
+  onChangeFillOpacity,
 }: MapLayerPanelProps) => {
   const { forms } = useForms();
   const [selectedFormId, setSelectedFormId] = useState<string>("");
@@ -267,7 +277,7 @@ export const MapLayerPanel = ({
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{layer.formTitle}</p>
                   <p className="text-xs text-muted-foreground">
-                    {layer.responses?.length || 0} points
+                    {layer.responses?.length || 0} feature{layer.responses?.length !== 1 ? 's' : ''} • {layer.geometryType || 'Unknown'}
                   </p>
                 </div>
 
@@ -306,48 +316,112 @@ export const MapLayerPanel = ({
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <Label className="text-xs">Symbol</Label>
-                  <Select
-                    value={layer.symbolType || 'circle'}
-                    onValueChange={(value) => onChangeSymbol(layer.id, value as SymbolType)}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="z-[9999] bg-popover">
-                      {SYMBOL_TYPES.map((symbol) => (
-                        <SelectItem key={symbol.id} value={symbol.id} className="text-xs">
-                          <span className="flex items-center gap-2">
-                            <span className="text-lg">{symbol.icon}</span>
-                            {symbol.name}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Geometry-specific styling controls */}
+              {(layer.geometryType === 'Point' || layer.geometryType === 'MultiPoint') && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Symbol</Label>
+                    <Select
+                      value={layer.symbolType || 'circle'}
+                      onValueChange={(value) => onChangeSymbol(layer.id, value as SymbolType)}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="z-[9999] bg-popover">
+                        {SYMBOL_TYPES.map((symbol) => (
+                          <SelectItem key={symbol.id} value={symbol.id} className="text-xs">
+                            <span className="flex items-center gap-2">
+                              <span className="text-lg">{symbol.icon}</span>
+                              {symbol.name}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div className="space-y-1">
-                  <Label className="text-xs">Size</Label>
-                  <Select
-                    value={layer.symbolSize || 'medium'}
-                    onValueChange={(value) => onChangeSize(layer.id, value as SymbolSize)}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="z-[9999] bg-popover">
-                      {SYMBOL_SIZES.map((size) => (
-                        <SelectItem key={size.id} value={size.id} className="text-xs">
-                          {size.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Size</Label>
+                    <Select
+                      value={layer.symbolSize || 'medium'}
+                      onValueChange={(value) => onChangeSize(layer.id, value as SymbolSize)}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="z-[9999] bg-popover">
+                        {SYMBOL_SIZES.map((size) => (
+                          <SelectItem key={size.id} value={size.id} className="text-xs">
+                            {size.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {(layer.geometryType === 'LineString' || layer.geometryType === 'MultiLineString') && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Line Weight</Label>
+                    <Select
+                      value={String(layer.lineWeight || 3)}
+                      onValueChange={(value) => onChangeLineWeight(layer.id, Number(value))}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="z-[9999] bg-popover">
+                        <SelectItem value="1" className="text-xs">Thin (1px)</SelectItem>
+                        <SelectItem value="2" className="text-xs">Light (2px)</SelectItem>
+                        <SelectItem value="3" className="text-xs">Medium (3px)</SelectItem>
+                        <SelectItem value="4" className="text-xs">Bold (4px)</SelectItem>
+                        <SelectItem value="6" className="text-xs">Heavy (6px)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs">Line Style</Label>
+                    <Select
+                      value={layer.lineStyle || 'solid'}
+                      onValueChange={(value) => onChangeLineStyle(layer.id, value as 'solid' | 'dashed')}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="z-[9999] bg-popover">
+                        <SelectItem value="solid" className="text-xs">Solid</SelectItem>
+                        <SelectItem value="dashed" className="text-xs">Dashed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {(layer.geometryType === 'Polygon' || layer.geometryType === 'MultiPolygon') && (
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Fill Opacity</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={layer.fillOpacity || 0.2}
+                        onChange={(e) => onChangeFillOpacity(layer.id, Number(e.target.value))}
+                        className="flex-1"
+                      />
+                      <span className="text-xs text-muted-foreground w-10 text-right">
+                        {Math.round((layer.fillOpacity || 0.2) * 100)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

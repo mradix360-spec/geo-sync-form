@@ -31,10 +31,14 @@ interface MapLayer {
   id: string;
   formId: string;
   formTitle: string;
+  geometryType: string;
   visible: boolean;
   color: string;
   symbolType?: SymbolType;
   symbolSize?: SymbolSize;
+  lineWeight?: number;
+  lineStyle?: 'solid' | 'dashed';
+  fillOpacity?: number;
   styleRule?: StyleRule;
   responses?: any[];
 }
@@ -128,7 +132,7 @@ const MapBuilder = () => {
           config.layers.map(async (layer: any) => {
             const { data: formData } = await supabase
               .from("forms")
-              .select("title")
+              .select("title, geometry_type")
               .eq("id", layer.formId)
               .single();
 
@@ -141,10 +145,14 @@ const MapBuilder = () => {
               id: layer.id || crypto.randomUUID(),
               formId: layer.formId,
               formTitle: formData?.title || "Unknown Form",
+              geometryType: formData?.geometry_type || "Point",
               visible: layer.visible ?? true,
               color: layer.color || "#3b82f6",
               symbolType: layer.symbolType || 'circle',
               symbolSize: layer.symbolSize || 'medium',
+              lineWeight: layer.lineWeight || 3,
+              lineStyle: layer.lineStyle || 'solid',
+              fillOpacity: layer.fillOpacity || 0.2,
               styleRule: layer.styleRule || undefined,
               responses: responses || [],
             };
@@ -199,6 +207,9 @@ const MapBuilder = () => {
           color: l.color,
           symbolType: l.symbolType || 'circle',
           symbolSize: l.symbolSize || 'medium',
+          lineWeight: l.lineWeight || 3,
+          lineStyle: l.lineStyle || 'solid',
+          fillOpacity: l.fillOpacity || 0.2,
           styleRule: l.styleRule || null,
         })),
         viewport: {
@@ -303,7 +314,7 @@ const MapBuilder = () => {
     try {
       const { data: formData, error: formError } = await supabase
         .from("forms")
-        .select("title")
+        .select("title, geometry_type")
         .eq("id", formId)
         .single();
 
@@ -320,10 +331,14 @@ const MapBuilder = () => {
         id: crypto.randomUUID(),
         formId,
         formTitle: formData.title,
+        geometryType: formData.geometry_type || "Point",
         visible: true,
         color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
         symbolType: 'circle',
         symbolSize: 'medium',
+        lineWeight: 3,
+        lineStyle: 'solid',
+        fillOpacity: 0.2,
         styleRule: undefined,
         responses: responses || [],
       };
@@ -376,6 +391,24 @@ const MapBuilder = () => {
     ));
   };
 
+  const handleChangeLineWeight = (layerId: string, lineWeight: number) => {
+    setLayers(layers.map(l =>
+      l.id === layerId ? { ...l, lineWeight } : l
+    ));
+  };
+
+  const handleChangeLineStyle = (layerId: string, lineStyle: 'solid' | 'dashed') => {
+    setLayers(layers.map(l =>
+      l.id === layerId ? { ...l, lineStyle } : l
+    ));
+  };
+
+  const handleChangeFillOpacity = (layerId: string, fillOpacity: number) => {
+    setLayers(layers.map(l =>
+      l.id === layerId ? { ...l, fillOpacity } : l
+    ));
+  };
+
   const visibleResponses = layers
     .filter(l => l.visible)
     .flatMap(l => (l.responses || []).map(r => ({
@@ -386,6 +419,9 @@ const MapBuilder = () => {
       styleRule: l.styleRule,
       layerTitle: l.formTitle,
       layerId: l.id,
+      lineWeight: l.lineWeight,
+      lineStyle: l.lineStyle,
+      fillOpacity: l.fillOpacity,
     })));
 
   if (loading) {
@@ -487,6 +523,9 @@ const MapBuilder = () => {
                         onChangeSymbol={handleChangeSymbol}
                         onChangeSize={handleChangeSize}
                         onChangeStyleRule={handleChangeStyleRule}
+                        onChangeLineWeight={handleChangeLineWeight}
+                        onChangeLineStyle={handleChangeLineStyle}
+                        onChangeFillOpacity={handleChangeFillOpacity}
                       />
                     </TabsContent>
 
