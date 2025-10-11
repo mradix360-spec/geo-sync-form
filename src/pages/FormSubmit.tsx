@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { LocationAccuracy } from "@/components/shared/LocationAccuracy";
+import { GeometryDrawer } from "@/components/forms/GeometryDrawer";
 
 interface ValidationRule {
   type: 'min' | 'max' | 'pattern' | 'minLength' | 'maxLength';
@@ -87,6 +88,7 @@ const FormSubmit = () => {
   const [location, setLocation] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
   const [locationError, setLocationError] = useState<string>('');
   const [watchId, setWatchId] = useState<number | null>(null);
+  const [capturedGeometry, setCapturedGeometry] = useState<any>(null);
 
   const handleBack = () => {
     const isFieldStaff = user?.roles.includes('field_staff');
@@ -413,7 +415,28 @@ const FormSubmit = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form || !location) return;
+    if (!form) return;
+
+    // For non-point geometries, require captured geometry
+    const geometryType = form.geometry_type?.toLowerCase();
+    if (geometryType !== 'point' && !capturedGeometry) {
+      toast({
+        variant: "destructive",
+        title: "Geometry required",
+        description: `Please draw a ${geometryType} on the map`,
+      });
+      return;
+    }
+
+    // For point geometries, require location
+    if (geometryType === 'point' && !location) {
+      toast({
+        variant: "destructive",
+        title: "Location required",
+        description: "Please wait for GPS location",
+      });
+      return;
+    }
 
     // Validate all fields
     const errors: Record<string, string> = {};
@@ -442,12 +465,15 @@ const FormSubmit = () => {
       // Generate client_id for idempotency
       const clientId = `${user?.id || 'anonymous'}_${formId}_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
       
+      // Use captured geometry or default to point from location
+      const geometry = capturedGeometry || {
+        type: 'Point',
+        coordinates: [location!.lng, location!.lat]
+      };
+
       const geojson = {
         type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: [location.lng, location.lat]
-        },
+        geometry,
         properties: {
           ...formData,
           ...fileUrls, // Include file paths
@@ -509,12 +535,15 @@ const FormSubmit = () => {
       // Fallback to offline storage on any error
       try {
         const clientId = `${user?.id || 'anonymous'}_${formId}_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+        
+        const geometry = capturedGeometry || {
+          type: 'Point',
+          coordinates: [location!.lng, location!.lat]
+        };
+
         const geojson = {
           type: 'Feature',
-          geometry: {
-            type: 'Point',
-            coordinates: [location.lng, location.lat]
-          },
+          geometry,
           properties: {
             ...formData,
             ...fileUrls,
@@ -650,19 +679,31 @@ const FormSubmit = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Location Status */}
-              <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
-                <MapPin className="w-4 h-4" />
-                {location ? (
-                  <span className="text-sm">
-                    Location: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
-                  </span>
-                ) : (
-                  <span className="text-sm text-destructive">
-                    {locationError || 'Capturing location...'}
-                  </span>
-                )}
-              </div>
+              {/* Geometry Drawing */}
+              {form.geometry_type && form.geometry_type.toLowerCase() !== 'point' ? (
+                <div className="space-y-2">
+                  <Label>Draw {form.geometry_type}</Label>
+                  <GeometryDrawer
+                    geometryType={form.geometry_type.toLowerCase() as 'point' | 'linestring' | 'polygon'}
+                    initialValue={capturedGeometry}
+                    onChange={(geom) => setCapturedGeometry(geom)}
+                    inputMethod="vertex"
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                  <MapPin className="w-4 h-4" />
+                  {location ? (
+                    <span className="text-sm">
+                      Location: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-destructive">
+                      {locationError || 'Capturing location...'}
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* Sections */}
               {currentPageSections.map((section, sectionIdx) => {
