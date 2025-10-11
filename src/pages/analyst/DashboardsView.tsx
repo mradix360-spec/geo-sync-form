@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { DashboardsList } from "@/components/dashboards/DashboardsList";
+import { NaturalLanguageDashboard } from "@/components/ai/NaturalLanguageDashboard";
 
 const DashboardsView = () => {
   const navigate = useNavigate();
@@ -18,6 +19,8 @@ const DashboardsView = () => {
           Create Dashboard
         </Button>
       </div>
+
+      <NaturalLanguageDashboard />
 
       <DashboardsList />
     </div>

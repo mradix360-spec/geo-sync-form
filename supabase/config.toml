@@ -1,5 +1,17 @@
 project_id = "shqclgwsgmlnimcggxch"
 
+[functions.analyze-photo]
+verify_jwt = true
+
+[functions.natural-language-dashboard]
+verify_jwt = true
+
+[functions.optimize-route]
+verify_jwt = true
+
+[functions.detect-anomalies]
+verify_jwt = true
+
 [functions.export-geojson]
 verify_jwt = true
 
