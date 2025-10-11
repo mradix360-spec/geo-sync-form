@@ -92,6 +92,17 @@ export const FormsList = ({
         .select('*')
         .eq('object_type', 'form');
 
+      // Get assigned forms for field users
+      let assignedFormIds: string[] = [];
+      if (isFieldUser()) {
+        const { data: assignments } = await supabase
+          .from('form_assignments')
+          .select('form_id')
+          .eq('user_id', currentUser.id);
+        
+        assignedFormIds = assignments?.map(a => a.form_id) || [];
+      }
+
       // Filter forms based on visibility - only show content from user's organization
       const visibleForms = allForms?.filter(form => {
         // Only show forms from user's organization
@@ -99,21 +110,36 @@ export const FormsList = ({
           return false;
         }
 
-        // Admins can see all content in their organization
-        if (isAdmin()) {
+        // Admins and analysts can see all content in their organization
+        if (isAdmin() || !isFieldUser()) {
           return true;
         }
         
-        // Check if form has shares
+        // Field users only see:
+        // 1. Forms assigned to them directly
+        if (assignedFormIds.includes(form.id)) {
+          return true;
+        }
+
+        // 2. Forms shared with groups they belong to
         const formShares = shares?.filter(s => s.object_id === form.id) || [];
+        const hasGroupShare = formShares.some(share => 
+          share.access_type === 'org' && 
+          share.group_id && 
+          groupIds.includes(share.group_id)
+        );
         
-        // If no shares exist (private), only show to creator
-        if (formShares.length === 0) {
-          return form.created_by === currentUser.id;
+        if (hasGroupShare) {
+          return true;
+        }
+
+        // 3. Public forms (shared with everyone)
+        const hasPublicShare = formShares.some(share => share.access_type === 'public');
+        if (hasPublicShare) {
+          return true;
         }
         
-        // If shares exist, show to everyone in org
-        return true;
+        return false;
       }) || [];
 
       const formsWithCount = visibleForms.map(form => ({
