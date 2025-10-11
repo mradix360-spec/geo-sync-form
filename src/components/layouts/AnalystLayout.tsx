@@ -30,7 +30,6 @@ const AnalystLayout = () => {
   };
 
   const navItems = [
-    { to: "/analyst", icon: BarChart3, label: "Dashboard", end: true },
     { to: "/analyst/content", icon: FolderOpen, label: "Content" },
     { to: "/analyst/forms", icon: FileText, label: "Forms" },
     { to: "/analyst/maps", icon: Map, label: "Maps" },
@@ -77,7 +76,6 @@ const AnalystLayout = () => {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.end}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
                   isActive
