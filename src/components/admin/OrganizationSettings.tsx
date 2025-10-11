@@ -136,7 +136,7 @@ export function OrganizationSettings() {
           <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
             <div>
               <p className="text-sm font-medium">Total Users</p>
-              <p className="text-2xl font-bold">{organization?.current_users || 0}</p>
+              <p className="text-2xl font-bold">{organization?.staff_count || 0}</p>
             </div>
             <div>
               <p className="text-sm font-medium">Max Users</p>
