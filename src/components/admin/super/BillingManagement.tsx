@@ -356,6 +356,28 @@ export const BillingManagement = () => {
                       <p className="font-semibold">{new Date(invoice.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
+                  {invoice.line_items && invoice.line_items.length > 0 && (
+                    <div className="mt-2 mb-4 p-3 bg-muted/50 rounded-lg border">
+                      <p className="text-xs font-semibold mb-2 text-muted-foreground uppercase">Invoice Breakdown</p>
+                      <div className="space-y-2">
+                        {invoice.line_items.map((item: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center text-sm py-1.5 border-b last:border-0">
+                            <div>
+                              <span className="capitalize font-medium">{item.role?.replace('_', ' ')}</span>
+                              <span className="text-muted-foreground ml-2">
+                                ({item.user_count} {item.user_count === 1 ? 'user' : 'users'} × {item.price_per_user?.toLocaleString()} {invoice.currency})
+                              </span>
+                            </div>
+                            <span className="font-semibold">{item.subtotal?.toLocaleString()} {invoice.currency}</span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between items-center text-sm pt-2 mt-2 border-t-2 font-bold">
+                          <span>Total</span>
+                          <span className="text-base">{invoice.amount.toLocaleString()} {invoice.currency}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <Button
                     onClick={() => sendInvoiceMutation.mutate(invoice.id)}
                     size="sm"
@@ -386,7 +408,7 @@ export const BillingManagement = () => {
                       {invoice.status}
                     </Badge>
                   </div>
-                  <div className="grid grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-4 gap-4 text-sm mb-4">
                     <div>
                       <p className="text-muted-foreground">Amount</p>
                       <p className="font-semibold">{invoice.amount.toLocaleString()} {invoice.currency}</p>
@@ -405,14 +427,25 @@ export const BillingManagement = () => {
                     </div>
                   </div>
                   {invoice.line_items && invoice.line_items.length > 0 && (
-                    <div className="mt-4 p-3 bg-muted rounded-lg">
-                      <p className="text-xs font-medium mb-2">Line Items</p>
-                      {invoice.line_items.map((item: any, idx: number) => (
-                        <div key={idx} className="flex justify-between text-xs py-1">
-                          <span className="capitalize">{item.role?.replace('_', ' ')}: {item.user_count} × {item.price_per_user?.toLocaleString()} {invoice.currency}</span>
-                          <span className="font-medium">{item.subtotal?.toLocaleString()} {invoice.currency}</span>
+                    <div className="mt-4 p-3 bg-muted/50 rounded-lg border">
+                      <p className="text-xs font-semibold mb-2 text-muted-foreground uppercase">Invoice Breakdown</p>
+                      <div className="space-y-2">
+                        {invoice.line_items.map((item: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center text-sm py-1.5 border-b last:border-0">
+                            <div>
+                              <span className="capitalize font-medium">{item.role?.replace('_', ' ')}</span>
+                              <span className="text-muted-foreground ml-2">
+                                ({item.user_count} {item.user_count === 1 ? 'user' : 'users'} × {item.price_per_user?.toLocaleString()} {invoice.currency})
+                              </span>
+                            </div>
+                            <span className="font-semibold">{item.subtotal?.toLocaleString()} {invoice.currency}</span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between items-center text-sm pt-2 mt-2 border-t-2 font-bold">
+                          <span>Total</span>
+                          <span className="text-base">{invoice.amount.toLocaleString()} {invoice.currency}</span>
                         </div>
-                      ))}
+                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -435,7 +468,7 @@ export const BillingManagement = () => {
                     </div>
                     <Badge variant="default">{invoice.status}</Badge>
                   </div>
-                  <div className="grid grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-4 gap-4 text-sm mb-4">
                     <div>
                       <p className="text-muted-foreground">Amount</p>
                       <p className="font-semibold">{invoice.amount.toLocaleString()} {invoice.currency}</p>
@@ -453,6 +486,28 @@ export const BillingManagement = () => {
                       <p className="font-semibold">{new Date(invoice.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
+                  {invoice.line_items && invoice.line_items.length > 0 && (
+                    <div className="mt-2 p-3 bg-muted/50 rounded-lg border">
+                      <p className="text-xs font-semibold mb-2 text-muted-foreground uppercase">Invoice Breakdown</p>
+                      <div className="space-y-2">
+                        {invoice.line_items.map((item: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center text-sm py-1.5 border-b last:border-0">
+                            <div>
+                              <span className="capitalize font-medium">{item.role?.replace('_', ' ')}</span>
+                              <span className="text-muted-foreground ml-2">
+                                ({item.user_count} {item.user_count === 1 ? 'user' : 'users'} × {item.price_per_user?.toLocaleString()} {invoice.currency})
+                              </span>
+                            </div>
+                            <span className="font-semibold">{item.subtotal?.toLocaleString()} {invoice.currency}</span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between items-center text-sm pt-2 mt-2 border-t-2 font-bold">
+                          <span>Total</span>
+                          <span className="text-base">{invoice.amount.toLocaleString()} {invoice.currency}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
