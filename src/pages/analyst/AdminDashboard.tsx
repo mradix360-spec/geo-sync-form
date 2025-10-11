@@ -4,6 +4,7 @@ import { OrganizationSettings } from "@/components/admin/OrganizationSettings";
 import { LandingPageEditor } from "@/components/admin/LandingPageEditor";
 import { ActivityLog } from "@/components/admin/ActivityLog";
 import { ContentManagement } from "@/components/admin/ContentManagement";
+import { GroupManagement } from "@/components/admin/GroupManagement";
 import { useRole } from "@/hooks/use-role";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
@@ -23,8 +24,9 @@ export default function AdminDashboard() {
       </div>
 
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="groups">Groups</TabsTrigger>
           <TabsTrigger value="organization">Organization</TabsTrigger>
           <TabsTrigger value="landing">Landing Page</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
@@ -33,6 +35,10 @@ export default function AdminDashboard() {
 
         <TabsContent value="users">
           <UserManagement />
+        </TabsContent>
+
+        <TabsContent value="groups">
+          <GroupManagement />
         </TabsContent>
 
         <TabsContent value="organization">

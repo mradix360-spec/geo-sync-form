@@ -11,11 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Lock, Users, Building2, Globe, UserPlus, Copy, Check, Code } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
 
 interface SharePermissionDialogProps {
   formId: string;
@@ -41,6 +43,22 @@ export const SharePermissionDialog = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
   const [targetOrgId, setTargetOrgId] = useState('');
+  const [selectedGroupId, setSelectedGroupId] = useState('');
+
+  const { data: groups } = useQuery({
+    queryKey: ["user-groups", user?.organisation_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("form_groups")
+        .select("*")
+        .eq("organisation_id", user?.organisation_id)
+        .order("name");
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.organisation_id && open,
+  });
 
   useEffect(() => {
     if (open && shareType === 'public') {
@@ -113,6 +131,11 @@ export const SharePermissionDialog = ({
         throw new Error('Please enter an organization ID');
       }
 
+      // Validate group selection if sharing with group
+      if (shareType === 'group' && !selectedGroupId) {
+        throw new Error('Please select a group');
+      }
+
       // Check if share exists
       const { data: existingShare } = await supabase
         .from('shares')
@@ -125,6 +148,7 @@ export const SharePermissionDialog = ({
         access_type: shareType,
         organisation_id: user.organisation_id,
         shared_with_organisation: shareType === 'other_organisation' ? targetOrgId : null,
+        group_id: shareType === 'group' ? selectedGroupId : null,
       };
 
       if (existingShare) {
@@ -243,6 +267,32 @@ export const SharePermissionDialog = ({
             );
           })}
         </RadioGroup>
+
+        {shareType === 'group' && (
+          <>
+            <Separator className="my-4" />
+            <div className="space-y-2">
+              <Label htmlFor="group-select">Select Group</Label>
+              <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+                <SelectTrigger id="group-select">
+                  <SelectValue placeholder="Choose a group" />
+                </SelectTrigger>
+                <SelectContent>
+                  {groups?.map((group) => (
+                    <SelectItem key={group.id} value={group.id}>
+                      {group.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {(!groups || groups.length === 0) && (
+                <p className="text-xs text-muted-foreground text-orange-500">
+                  No groups available. Ask an admin to create groups first.
+                </p>
+              )}
+            </div>
+          </>
+        )}
 
         {shareType === 'other_organisation' && (
           <>
