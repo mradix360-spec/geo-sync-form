@@ -36,79 +36,223 @@ export function ContentManagement() {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<{ id: string; type: string } | null>(null);
 
-  // Fetch forms with shares
+  // Fetch forms with comprehensive sharing logic
   const { data: forms, isLoading: formsLoading } = useQuery({
-    queryKey: ["admin-forms-with-shares", currentUser?.organisation_id],
+    queryKey: ["content-forms", currentUser?.id, currentUser?.organisation_id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("forms")
+      if (!currentUser?.id || !currentUser?.organisation_id) return [];
+
+      // Get user's groups
+      const { data: userGroups } = await supabase
+        .from('form_group_members')
+        .select('group_id')
+        .eq('user_id', currentUser.id);
+
+      const groupIds = userGroups?.map(g => g.group_id) || [];
+
+      // Get all forms
+      const { data: allForms, error } = await supabase
+        .from('forms')
         .select(`
           *,
-          users(email, full_name),
-          shares(access_type)
+          users(email, full_name)
         `)
-        .eq("organisation_id", currentUser?.organisation_id)
-        .order("created_at", { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data?.map(form => ({
-        ...form,
-        share_type: Array.isArray(form.shares) && form.shares.length > 0 
-          ? (form.shares[0] as any).access_type 
-          : 'private'
-      })) || [];
+
+      // Get all shares
+      const { data: shares } = await supabase
+        .from('shares')
+        .select('*')
+        .eq('object_type', 'form');
+
+      // Filter forms based on visibility
+      const visibleForms = allForms?.filter(form => {
+        // Own organization's forms
+        if (form.organisation_id === currentUser.organisation_id) {
+          return true;
+        }
+
+        // Check shares
+        const formShares = shares?.filter(s => s.object_id === form.id) || [];
+        return formShares.some(share => {
+          if (share.access_type === 'public') return true;
+          if (share.shared_with_organisation === currentUser.organisation_id) return true;
+          if (share.shared_with_user === currentUser.id) return true;
+          if (share.group_id && groupIds.includes(share.group_id)) return true;
+          return false;
+        });
+      }) || [];
+
+      // Add share_type to each form
+      return visibleForms.map(form => {
+        const formShares = shares?.filter(s => s.object_id === form.id) || [];
+        let share_type = 'private';
+        
+        if (formShares.some(s => s.access_type === 'public')) {
+          share_type = 'public';
+        } else if (formShares.some(s => s.shared_with_organisation)) {
+          share_type = 'organisation';
+        } else if (formShares.some(s => s.group_id)) {
+          share_type = 'group';
+        } else if (formShares.some(s => s.shared_with_user)) {
+          share_type = 'user';
+        }
+
+        return { ...form, share_type };
+      });
     },
-    enabled: !!currentUser?.organisation_id,
+    enabled: !!currentUser?.id && !!currentUser?.organisation_id,
   });
 
-  // Fetch maps with shares
+  // Fetch maps with comprehensive sharing logic
   const { data: maps, isLoading: mapsLoading } = useQuery({
-    queryKey: ["admin-maps-with-shares", currentUser?.organisation_id],
+    queryKey: ["content-maps", currentUser?.id, currentUser?.organisation_id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("maps")
+      if (!currentUser?.id || !currentUser?.organisation_id) return [];
+
+      // Get user's groups
+      const { data: userGroups } = await supabase
+        .from('form_group_members')
+        .select('group_id')
+        .eq('user_id', currentUser.id);
+
+      const groupIds = userGroups?.map(g => g.group_id) || [];
+
+      // Get all maps
+      const { data: allMaps, error } = await supabase
+        .from('maps')
         .select(`
           *,
-          users(email, full_name),
-          shares(access_type)
+          users(email, full_name)
         `)
-        .eq("organisation_id", currentUser?.organisation_id)
-        .order("created_at", { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data?.map(map => ({
-        ...map,
-        share_type: Array.isArray(map.shares) && map.shares.length > 0 
-          ? (map.shares[0] as any).access_type 
-          : 'private'
-      })) || [];
+
+      // Get all shares
+      const { data: shares } = await supabase
+        .from('shares')
+        .select('*')
+        .eq('object_type', 'map');
+
+      // Filter maps based on visibility
+      const visibleMaps = allMaps?.filter(map => {
+        // Own organization's maps
+        if (map.organisation_id === currentUser.organisation_id) {
+          return true;
+        }
+
+        // Check shares
+        const mapShares = shares?.filter(s => s.object_id === map.id) || [];
+        return mapShares.some(share => {
+          if (share.access_type === 'public') return true;
+          if (share.shared_with_organisation === currentUser.organisation_id) return true;
+          if (share.shared_with_user === currentUser.id) return true;
+          if (share.group_id && groupIds.includes(share.group_id)) return true;
+          return false;
+        });
+      }) || [];
+
+      // Add share_type to each map
+      return visibleMaps.map(map => {
+        const mapShares = shares?.filter(s => s.object_id === map.id) || [];
+        let share_type = 'private';
+        
+        if (mapShares.some(s => s.access_type === 'public')) {
+          share_type = 'public';
+        } else if (mapShares.some(s => s.shared_with_organisation)) {
+          share_type = 'organisation';
+        } else if (mapShares.some(s => s.group_id)) {
+          share_type = 'group';
+        } else if (mapShares.some(s => s.shared_with_user)) {
+          share_type = 'user';
+        }
+
+        return { ...map, share_type };
+      });
     },
-    enabled: !!currentUser?.organisation_id,
+    enabled: !!currentUser?.id && !!currentUser?.organisation_id,
   });
 
-  // Fetch dashboards with shares
+  // Fetch dashboards with comprehensive sharing logic
   const { data: dashboards, isLoading: dashboardsLoading } = useQuery({
-    queryKey: ["admin-dashboards-with-shares", currentUser?.organisation_id],
+    queryKey: ["content-dashboards", currentUser?.id, currentUser?.organisation_id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("dashboards")
+      if (!currentUser?.id || !currentUser?.organisation_id) return [];
+
+      // Get user's groups
+      const { data: userGroups } = await supabase
+        .from('form_group_members')
+        .select('group_id')
+        .eq('user_id', currentUser.id);
+
+      const groupIds = userGroups?.map(g => g.group_id) || [];
+
+      // Get all dashboards
+      const { data: allDashboards, error } = await supabase
+        .from('dashboards')
         .select(`
           *,
-          users(email, full_name),
-          shares(access_type)
+          users(email, full_name)
         `)
-        .eq("organisation_id", currentUser?.organisation_id)
-        .order("created_at", { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data?.map(dashboard => ({
-        ...dashboard,
-        share_type: Array.isArray(dashboard.shares) && dashboard.shares.length > 0 
-          ? (dashboard.shares[0] as any).access_type 
-          : 'private'
-      })) || [];
+
+      // Get all shares
+      const { data: shares } = await supabase
+        .from('shares')
+        .select('*')
+        .eq('object_type', 'dashboard');
+
+      // Filter dashboards based on visibility
+      const visibleDashboards = allDashboards?.filter(dashboard => {
+        // Own organization's dashboards
+        if (dashboard.organisation_id === currentUser.organisation_id) {
+          return true;
+        }
+
+        // Public dashboards
+        if (dashboard.is_public) {
+          return true;
+        }
+
+        // Check shares
+        const dashboardShares = shares?.filter(s => s.object_id === dashboard.id) || [];
+        return dashboardShares.some(share => {
+          if (share.access_type === 'public') return true;
+          if (share.shared_with_organisation === currentUser.organisation_id) return true;
+          if (share.shared_with_user === currentUser.id) return true;
+          if (share.group_id && groupIds.includes(share.group_id)) return true;
+          return false;
+        });
+      }) || [];
+
+      // Add share_type to each dashboard
+      return visibleDashboards.map(dashboard => {
+        if (dashboard.is_public) {
+          return { ...dashboard, share_type: 'public' };
+        }
+
+        const dashboardShares = shares?.filter(s => s.object_id === dashboard.id) || [];
+        let share_type = 'private';
+        
+        if (dashboardShares.some(s => s.access_type === 'public')) {
+          share_type = 'public';
+        } else if (dashboardShares.some(s => s.shared_with_organisation)) {
+          share_type = 'organisation';
+        } else if (dashboardShares.some(s => s.group_id)) {
+          share_type = 'group';
+        } else if (dashboardShares.some(s => s.shared_with_user)) {
+          share_type = 'user';
+        }
+
+        return { ...dashboard, share_type };
+      });
     },
-    enabled: !!currentUser?.organisation_id,
+    enabled: !!currentUser?.id && !!currentUser?.organisation_id,
   });
 
   // Combine all content
@@ -306,11 +450,11 @@ export function ContentManagement() {
           onSuccess={() => {
             // Refetch data to update share status
             if (selectedItem.type === 'form') {
-              queryClient.invalidateQueries({ queryKey: ["admin-forms-with-shares"] });
+              queryClient.invalidateQueries({ queryKey: ["content-forms"] });
             } else if (selectedItem.type === 'map') {
-              queryClient.invalidateQueries({ queryKey: ["admin-maps-with-shares"] });
+              queryClient.invalidateQueries({ queryKey: ["content-maps"] });
             } else {
-              queryClient.invalidateQueries({ queryKey: ["admin-dashboards-with-shares"] });
+              queryClient.invalidateQueries({ queryKey: ["content-dashboards"] });
             }
           }}
         />
