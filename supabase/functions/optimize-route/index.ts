@@ -36,14 +36,14 @@ Consider:
 
 Return JSON with:
 {
-  "optimizedOrder": [indices of locations in visiting order],
+  "optimizedOrder": [array of indices showing visit order],
   "estimatedDistance": "approximate total distance in km",
   "estimatedTime": "approximate total time in hours",
   "reasoning": "brief explanation of routing logic",
   "waypoints": [
     {
       "index": original_location_index,
-      "order": visit_order,
+      "order": visit_order_number,
       "reason": "why this position"
     }
   ]
@@ -84,6 +84,8 @@ Return JSON with:
     }
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error("AI API error:", response.status, errorText);
       throw new Error(`AI API error: ${response.status}`);
     }
 
@@ -92,7 +94,6 @@ Return JSON with:
 
     console.log("Route optimization complete");
 
-    // Parse JSON from response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     const routeOptimization = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
 
@@ -106,7 +107,7 @@ Return JSON with:
   } catch (error) {
     console.error("Error in optimize-route:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

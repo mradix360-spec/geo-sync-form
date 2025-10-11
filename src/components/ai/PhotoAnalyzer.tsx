@@ -65,10 +65,10 @@ export const PhotoAnalyzer = ({ imageUrl, onAnalysisComplete }: PhotoAnalyzerPro
     }
   };
 
-  const getRiskColor = (level: string) => {
+  const getRiskColor = (level: string): "default" | "destructive" | "outline" | "secondary" => {
     switch (level) {
       case "high": return "destructive";
-      case "medium": return "warning";
+      case "medium": return "outline";
       default: return "secondary";
     }
   };

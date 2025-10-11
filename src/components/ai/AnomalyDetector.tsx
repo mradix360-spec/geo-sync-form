@@ -70,10 +70,10 @@ export const AnomalyDetector = ({
 
   if (!report) return null;
 
-  const getSeverityColor = (severity: string) => {
+  const getSeverityColor = (severity: string): "default" | "destructive" | "outline" | "secondary" => {
     switch (severity) {
       case "high": return "destructive";
-      case "medium": return "warning";
+      case "medium": return "outline";
       default: return "secondary";
     }
   };

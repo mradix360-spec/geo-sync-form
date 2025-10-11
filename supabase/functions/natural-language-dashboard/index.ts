@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,24 +14,28 @@ serve(async (req) => {
   try {
     const { query, userId, orgId } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY not configured");
     }
 
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error("Supabase configuration missing");
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     console.log("Processing natural language query:", query);
 
-    // Get available forms for context
     const { data: forms } = await supabase
       .from('forms')
       .select('id, title, form_schema')
       .eq('organisation_id', orgId)
       .limit(20);
 
-    const formsContext = forms?.map(f => ({
+    const formsContext = forms?.map((f: any) => ({
       id: f.id,
       title: f.title,
       fields: f.form_schema?.fields?.map((field: any) => field.name) || []
@@ -98,6 +102,8 @@ Use appropriate widget types: stat_card for single metrics, bar_chart for catego
     }
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error("AI API error:", response.status, errorText);
       throw new Error(`AI API error: ${response.status}`);
     }
 
@@ -106,7 +112,6 @@ Use appropriate widget types: stat_card for single metrics, bar_chart for catego
 
     console.log("Dashboard config generated");
 
-    // Parse JSON from response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     const dashboardConfig = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
 
@@ -120,7 +125,7 @@ Use appropriate widget types: stat_card for single metrics, bar_chart for catego
   } catch (error) {
     console.error("Error in natural-language-dashboard:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

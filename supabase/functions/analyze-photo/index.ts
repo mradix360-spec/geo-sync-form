@@ -34,7 +34,7 @@ serve(async (req) => {
             content: [
               {
                 type: "text",
-                text: "Analyze this image from a field data collection context. Identify: 1) Main objects/features, 2) Potential issues or damage, 3) Location type (urban/rural/infrastructure), 4) Suggested tags, 5) Risk level (low/medium/high). Return as JSON with keys: objects, issues, locationType, tags, riskLevel, description."
+                text: "Analyze this image from a field data collection context. Identify: 1) Main objects/features, 2) Potential issues or damage, 3) Location type (urban/rural/infrastructure), 4) Suggested tags, 5) Risk level (low/medium/high). Return as JSON with keys: objects (array of strings), issues (array of strings), locationType (string), tags (array of strings), riskLevel (string), description (string)."
               },
               {
                 type: "image_url",
@@ -68,6 +68,8 @@ serve(async (req) => {
     }
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error("AI API error:", response.status, errorText);
       throw new Error(`AI API error: ${response.status}`);
     }
 
@@ -76,7 +78,6 @@ serve(async (req) => {
 
     console.log("Photo analysis complete");
 
-    // Try to parse JSON from response
     let analysis;
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -88,7 +89,8 @@ serve(async (req) => {
         tags: [],
         riskLevel: "low"
       };
-    } catch {
+    } catch (parseError) {
+      console.error("Error parsing AI response:", parseError);
       analysis = {
         description: content,
         objects: [],
@@ -105,7 +107,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error in analyze-photo:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
