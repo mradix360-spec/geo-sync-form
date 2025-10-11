@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/use-role";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,8 @@ export const FormsList = ({
   loading: externalLoading
 }: FormsListProps) => {
   const navigate = useNavigate();
-  const { canCreateForms, canAssignForms, isFieldUser } = useRole();
+  const { user: currentUser } = useAuth();
+  const { canCreateForms, canAssignForms, isFieldUser, isAdmin } = useRole();
   const [internalForms, setInternalForms] = useState<Form[]>([]);
   const [internalLoading, setInternalLoading] = useState(true);
   const [assignFormId, setAssignFormId] = useState<string | null>(null);
@@ -52,14 +54,29 @@ export const FormsList = ({
 
   useEffect(() => {
     // Only load forms if not provided externally
-    if (!externalForms) {
+    if (!externalForms && currentUser?.id) {
       loadForms();
     }
-  }, [externalForms]);
+  }, [externalForms, currentUser?.id]);
 
   const loadForms = async () => {
     try {
-      const { data, error } = await supabase
+      if (!currentUser?.id || !currentUser?.organisation_id) {
+        setInternalForms([]);
+        setInternalLoading(false);
+        return;
+      }
+
+      // Get user's groups
+      const { data: userGroups } = await supabase
+        .from('form_group_members')
+        .select('group_id')
+        .eq('user_id', currentUser.id);
+
+      const groupIds = userGroups?.map(g => g.group_id) || [];
+
+      // Get all forms with response counts
+      const { data: allForms, error } = await supabase
         .from("forms")
         .select(`
           *,
@@ -69,10 +86,40 @@ export const FormsList = ({
 
       if (error) throw error;
 
-      const formsWithCount = data?.map(form => ({
+      // Get all shares
+      const { data: shares } = await supabase
+        .from('shares')
+        .select('*')
+        .eq('object_type', 'form');
+
+      // Filter forms based on visibility - only show content from user's organization
+      const visibleForms = allForms?.filter(form => {
+        // Only show forms from user's organization
+        if (form.organisation_id !== currentUser.organisation_id) {
+          return false;
+        }
+
+        // Admins can see all content in their organization
+        if (isAdmin()) {
+          return true;
+        }
+        
+        // Check if form has shares
+        const formShares = shares?.filter(s => s.object_id === form.id) || [];
+        
+        // If no shares exist (private), only show to creator
+        if (formShares.length === 0) {
+          return form.created_by === currentUser.id;
+        }
+        
+        // If shares exist, show to everyone in org
+        return true;
+      }) || [];
+
+      const formsWithCount = visibleForms.map(form => ({
         ...form,
         response_count: form.form_responses?.[0]?.count || 0,
-      })) || [];
+      }));
 
       setInternalForms(formsWithCount);
     } catch (error: any) {
