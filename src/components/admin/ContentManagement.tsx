@@ -92,10 +92,19 @@ export function ContentManagement() {
       const visibleForms = allForms?.filter(form => {
         // Own organization's forms
         if (form.organisation_id === currentUser.organisation_id) {
+          // Check if form has shares
+          const formShares = shares?.filter(s => s.object_id === form.id) || [];
+          
+          // If no shares exist (private), only show to creator
+          if (formShares.length === 0) {
+            return form.created_by === currentUser.id;
+          }
+          
+          // If shares exist, show to everyone in org
           return true;
         }
 
-        // Check shares
+        // Check shares for forms from other organizations
         const formShares = shares?.filter(s => s.object_id === form.id) || [];
         return formShares.some(share => {
           if (share.access_type === 'public') return true;
@@ -166,10 +175,19 @@ export function ContentManagement() {
       const visibleMaps = allMaps?.filter(map => {
         // Own organization's maps
         if (map.organisation_id === currentUser.organisation_id) {
+          // Check if map has shares
+          const mapShares = shares?.filter(s => s.object_id === map.id) || [];
+          
+          // If no shares exist (private), only show to creator
+          if (mapShares.length === 0) {
+            return map.created_by === currentUser.id;
+          }
+          
+          // If shares exist, show to everyone in org
           return true;
         }
 
-        // Check shares
+        // Check shares for maps from other organizations
         const mapShares = shares?.filter(s => s.object_id === map.id) || [];
         return mapShares.some(share => {
           if (share.access_type === 'public') return true;
@@ -240,15 +258,29 @@ export function ContentManagement() {
       const visibleDashboards = allDashboards?.filter(dashboard => {
         // Own organization's dashboards
         if (dashboard.organisation_id === currentUser.organisation_id) {
+          // Check if dashboard is public
+          if (dashboard.is_public) {
+            return true;
+          }
+          
+          // Check if dashboard has shares
+          const dashboardShares = shares?.filter(s => s.object_id === dashboard.id) || [];
+          
+          // If no shares exist (private), only show to creator
+          if (dashboardShares.length === 0) {
+            return dashboard.created_by === currentUser.id;
+          }
+          
+          // If shares exist, show to everyone in org
           return true;
         }
 
-        // Public dashboards
+        // Public dashboards from other orgs
         if (dashboard.is_public) {
           return true;
         }
 
-        // Check shares
+        // Check shares for dashboards from other organizations
         const dashboardShares = shares?.filter(s => s.object_id === dashboard.id) || [];
         return dashboardShares.some(share => {
           if (share.access_type === 'public') return true;
