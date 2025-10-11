@@ -5,7 +5,7 @@ import { LandingPageEditor } from "@/components/admin/LandingPageEditor";
 import { ActivityLog } from "@/components/admin/ActivityLog";
 import { AccessManagement } from "@/components/admin/content/AccessManagement";
 import { GroupManagement } from "@/components/admin/GroupManagement";
-import { BillingManagement } from "@/components/admin/super/BillingManagement";
+import { OrgInvoicesView } from "@/components/admin/OrgInvoicesView";
 import { useRole } from "@/hooks/use-role";
 import { Navigate } from "react-router-dom";
 
@@ -55,7 +55,7 @@ export default function AdminDashboard() {
         </TabsContent>
 
         <TabsContent value="billing">
-          <BillingManagement />
+          <OrgInvoicesView />
         </TabsContent>
 
         <TabsContent value="activity">
