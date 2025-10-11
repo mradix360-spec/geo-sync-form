@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, FeatureGroup, useMap } from 'react-leaflet';
-import { EditControl } from 'react-leaflet-draw';
+import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
+import 'leaflet-draw';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -52,13 +52,12 @@ const GeometryInfo = ({ geometry }: { geometry: any }) => {
       const coords = geometry.coordinates[0] as [number, number][];
       
       // Calculate area using shoelace formula (planar approximation)
-      // For more accuracy, use geodesic calculations
       let area = 0;
       for (let i = 0; i < coords.length - 1; i++) {
         area += (coords[i][0] * coords[i + 1][1]) - (coords[i + 1][0] * coords[i][1]);
       }
       area = Math.abs(area / 2);
-      // Convert to approximate square meters (rough conversion at equator)
+      // Convert to approximate square meters (rough conversion)
       area = area * 111000 * 111000;
       
       // Calculate perimeter
@@ -116,7 +115,6 @@ const GPSStreamingControl = ({
 
   useEffect(() => {
     if (isStreaming) {
-      // Start GPS streaming
       watchIdRef.current = navigator.geolocation.watchPosition(
         (position) => {
           const location = {
@@ -142,7 +140,6 @@ const GPSStreamingControl = ({
         }
       );
     } else {
-      // Stop GPS streaming
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;
@@ -175,64 +172,165 @@ const GPSStreamingControl = ({
 };
 
 const MapController = ({ 
-  center, 
-  zoom, 
   geometryType,
   inputMethod,
-  onCreated,
-  onEdited,
-  onDeleted,
+  onGeometryChange,
   initialGeometry
 }: any) => {
   const map = useMap();
-  const featureGroupRef = useRef<L.FeatureGroup>(null);
+  const drawnItemsRef = useRef<L.FeatureGroup>(new L.FeatureGroup());
+  const drawControlRef = useRef<L.Control.Draw | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const streamingLayerRef = useRef<L.Polyline | null>(null);
 
   useEffect(() => {
-    map.setView(center, zoom);
-  }, [center, zoom, map]);
+    const drawnItems = drawnItemsRef.current;
+    map.addLayer(drawnItems);
 
-  useEffect(() => {
     // Load initial geometry if provided
-    if (initialGeometry && featureGroupRef.current) {
+    if (initialGeometry) {
       const layer = L.geoJSON(initialGeometry);
       layer.eachLayer((l) => {
-        featureGroupRef.current?.addLayer(l);
+        drawnItems.addLayer(l);
       });
     }
-  }, [initialGeometry]);
+
+    // Setup draw control for sketch mode
+    if (inputMethod === 'sketch') {
+      const drawControl = new L.Control.Draw({
+        edit: {
+          featureGroup: drawnItems
+        },
+        draw: {
+          marker: geometryType === 'point' ? {} : false,
+          polyline: geometryType === 'linestring' ? {
+            shapeOptions: {
+              color: '#3b82f6',
+              weight: 3
+            }
+          } : false,
+          polygon: geometryType === 'polygon' ? {
+            shapeOptions: {
+              color: '#3b82f6',
+              fillOpacity: 0.3
+            }
+          } : false,
+          circle: false,
+          rectangle: false,
+          circlemarker: false
+        }
+      });
+      
+      map.addControl(drawControl);
+      drawControlRef.current = drawControl;
+    }
+
+    // Event handlers
+    const handleCreated = (e: any) => {
+      const layer = e.layer;
+      drawnItems.addLayer(layer);
+      
+      let geojson: any = null;
+      if (layer instanceof L.Marker) {
+        const latlng = layer.getLatLng();
+        geojson = {
+          type: 'Point',
+          coordinates: [latlng.lng, latlng.lat]
+        };
+      } else if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
+        const latlngs = layer.getLatLngs() as L.LatLng[];
+        geojson = {
+          type: 'LineString',
+          coordinates: latlngs.map(ll => [ll.lng, ll.lat])
+        };
+      } else if (layer instanceof L.Polygon) {
+        const latlngs = layer.getLatLngs()[0] as L.LatLng[];
+        geojson = {
+          type: 'Polygon',
+          coordinates: [latlngs.map(ll => [ll.lng, ll.lat]).concat([[latlngs[0].lng, latlngs[0].lat]])]
+        };
+      }
+      
+      onGeometryChange(geojson);
+    };
+
+    const handleEdited = (e: any) => {
+      e.layers.eachLayer((layer: any) => {
+        let geojson: any = null;
+        
+        if (layer instanceof L.Marker) {
+          const latlng = layer.getLatLng();
+          geojson = {
+            type: 'Point',
+            coordinates: [latlng.lng, latlng.lat]
+          };
+        } else if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
+          const latlngs = layer.getLatLngs() as L.LatLng[];
+          geojson = {
+            type: 'LineString',
+            coordinates: latlngs.map(ll => [ll.lng, ll.lat])
+          };
+        } else if (layer instanceof L.Polygon) {
+          const latlngs = layer.getLatLngs()[0] as L.LatLng[];
+          geojson = {
+            type: 'Polygon',
+            coordinates: [latlngs.map(ll => [ll.lng, ll.lat]).concat([[latlngs[0].lng, latlngs[0].lat]])]
+          };
+        }
+        
+        if (geojson) {
+          onGeometryChange(geojson);
+        }
+      });
+    };
+
+    const handleDeleted = () => {
+      onGeometryChange(null);
+    };
+
+    map.on(L.Draw.Event.CREATED, handleCreated);
+    map.on(L.Draw.Event.EDITED, handleEdited);
+    map.on(L.Draw.Event.DELETED, handleDeleted);
+
+    return () => {
+      map.off(L.Draw.Event.CREATED, handleCreated);
+      map.off(L.Draw.Event.EDITED, handleEdited);
+      map.off(L.Draw.Event.DELETED, handleDeleted);
+      
+      if (drawControlRef.current) {
+        map.removeControl(drawControlRef.current);
+      }
+      map.removeLayer(drawnItems);
+    };
+  }, [map, geometryType, inputMethod]);
 
   const handleGPSPoint = (lat: number, lng: number) => {
-    if (!featureGroupRef.current) return;
+    const drawnItems = drawnItemsRef.current;
 
     if (geometryType === 'point') {
-      // Replace existing marker
-      featureGroupRef.current.clearLayers();
+      drawnItems.clearLayers();
       const marker = L.marker([lat, lng]);
-      featureGroupRef.current.addLayer(marker);
+      drawnItems.addLayer(marker);
       
       const geojson = {
         type: 'Point',
         coordinates: [lng, lat]
       };
-      onCreated({ layer: marker, layerType: 'marker' }, geojson);
+      onGeometryChange(geojson);
     } else if (geometryType === 'linestring' && isStreaming) {
-      // Add point to streaming line
       if (!streamingLayerRef.current) {
         streamingLayerRef.current = L.polyline([[lat, lng]], { color: '#3b82f6', weight: 3 });
-        featureGroupRef.current.addLayer(streamingLayerRef.current);
+        drawnItems.addLayer(streamingLayerRef.current);
       } else {
         streamingLayerRef.current.addLatLng([lat, lng]);
       }
       
-      // Update geojson
       const latlngs = streamingLayerRef.current.getLatLngs() as L.LatLng[];
       const geojson = {
         type: 'LineString',
         coordinates: latlngs.map(ll => [ll.lng, ll.lat])
       };
-      onCreated({ layer: streamingLayerRef.current, layerType: 'polyline' }, geojson);
+      onGeometryChange(geojson);
     }
   };
 
@@ -272,63 +370,14 @@ const MapController = ({
     );
   };
 
+  const handleClear = () => {
+    drawnItemsRef.current.clearLayers();
+    streamingLayerRef.current = null;
+    onGeometryChange(null);
+  };
+
   return (
     <>
-      <FeatureGroup ref={featureGroupRef}>
-        {inputMethod === 'sketch' && (
-          <EditControl
-            position="topright"
-            onCreated={(e) => {
-              const layer = e.layer;
-              let geojson: any = null;
-
-              if (geometryType === 'point' && e.layerType === 'marker') {
-                const latlng = (layer as L.Marker).getLatLng();
-                geojson = {
-                  type: 'Point',
-                  coordinates: [latlng.lng, latlng.lat]
-                };
-              } else if (geometryType === 'linestring' && e.layerType === 'polyline') {
-                const latlngs = (layer as L.Polyline).getLatLngs() as L.LatLng[];
-                geojson = {
-                  type: 'LineString',
-                  coordinates: latlngs.map(ll => [ll.lng, ll.lat])
-                };
-              } else if (geometryType === 'polygon' && e.layerType === 'polygon') {
-                const latlngs = (layer as L.Polygon).getLatLngs()[0] as L.LatLng[];
-                geojson = {
-                  type: 'Polygon',
-                  coordinates: [latlngs.map(ll => [ll.lng, ll.lat]).concat([[latlngs[0].lng, latlngs[0].lat]])]
-                };
-              }
-
-              onCreated(e, geojson);
-            }}
-            onEdited={onEdited}
-            onDeleted={onDeleted}
-            draw={{
-              rectangle: false,
-              circle: false,
-              circlemarker: false,
-              marker: geometryType === 'point',
-              polyline: geometryType === 'linestring' ? {
-                shapeOptions: {
-                  color: '#3b82f6',
-                  weight: 3
-                }
-              } : false,
-              polygon: geometryType === 'polygon' ? {
-                shapeOptions: {
-                  color: '#3b82f6',
-                  fillOpacity: 0.3
-                }
-              } : false
-            }}
-          />
-        )}
-      </FeatureGroup>
-
-      {/* Vertex mode controls */}
       {inputMethod === 'vertex' && (
         <div className="leaflet-top leaflet-right" style={{ marginTop: '80px', marginRight: '10px' }}>
           <Card className="p-3 space-y-2">
@@ -350,16 +399,12 @@ const MapController = ({
                 Add GPS Point
               </Button>
             )}
-            {featureGroupRef.current && featureGroupRef.current.getLayers().length > 0 && (
+            {drawnItemsRef.current && drawnItemsRef.current.getLayers().length > 0 && (
               <Button
                 type="button"
                 size="sm"
                 variant="destructive"
-                onClick={() => {
-                  featureGroupRef.current?.clearLayers();
-                  streamingLayerRef.current = null;
-                  onDeleted();
-                }}
+                onClick={handleClear}
                 className="w-full"
               >
                 <Trash2 className="w-4 h-4 mr-1" />
@@ -379,64 +424,24 @@ export const GeometryDrawer = ({
   onChange,
   inputMethod = 'sketch'
 }: GeometryDrawerProps) => {
-  const [center, setCenter] = useState<[number, number]>([-6.7924, 39.2083]); // Dar es Salaam
+  const [center, setCenter] = useState<[number, number]>([-6.7924, 39.2083]);
   const [zoom, setZoom] = useState(13);
   const [currentGeometry, setCurrentGeometry] = useState<any>(initialValue);
 
   useEffect(() => {
-    // Get user's current location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setCenter([position.coords.latitude, position.coords.longitude]);
         },
-        () => {
-          // Fallback to default location
-        }
+        () => {}
       );
     }
   }, []);
 
-  const handleCreated = (e: any, geojson: any) => {
+  const handleGeometryChange = (geojson: any) => {
     setCurrentGeometry(geojson);
     onChange(geojson);
-  };
-
-  const handleEdited = (e: any) => {
-    const layers = e.layers;
-    layers.eachLayer((layer: any) => {
-      let geojson: any = null;
-
-      if (layer instanceof L.Marker) {
-        const latlng = layer.getLatLng();
-        geojson = {
-          type: 'Point',
-          coordinates: [latlng.lng, latlng.lat]
-        };
-      } else if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
-        const latlngs = layer.getLatLngs() as L.LatLng[];
-        geojson = {
-          type: 'LineString',
-          coordinates: latlngs.map(ll => [ll.lng, ll.lat])
-        };
-      } else if (layer instanceof L.Polygon) {
-        const latlngs = layer.getLatLngs()[0] as L.LatLng[];
-        geojson = {
-          type: 'Polygon',
-          coordinates: [latlngs.map(ll => [ll.lng, ll.lat]).concat([[latlngs[0].lng, latlngs[0].lat]])]
-        };
-      }
-
-      if (geojson) {
-        setCurrentGeometry(geojson);
-        onChange(geojson);
-      }
-    });
-  };
-
-  const handleDeleted = () => {
-    setCurrentGeometry(null);
-    onChange(null);
   };
 
   return (
@@ -465,13 +470,9 @@ export const GeometryDrawer = ({
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <MapController
-            center={center}
-            zoom={zoom}
             geometryType={geometryType}
             inputMethod={inputMethod}
-            onCreated={handleCreated}
-            onEdited={handleEdited}
-            onDeleted={handleDeleted}
+            onGeometryChange={handleGeometryChange}
             initialGeometry={initialValue}
           />
         </MapContainer>
