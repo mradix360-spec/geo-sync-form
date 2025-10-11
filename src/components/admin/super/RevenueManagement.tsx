@@ -1,9 +1,27 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, TrendingUp, FileText, CheckCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { DollarSign, TrendingUp, FileText, CheckCircle, Plus } from "lucide-react";
 
 export const RevenueManagement = () => {
+  const queryClient = useQueryClient();
+  const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<string>("");
+  const [paymentData, setPaymentData] = useState({
+    amount: "",
+    paymentDate: new Date().toISOString().split('T')[0],
+    paymentMethod: "",
+    paymentReference: "",
+    notes: ""
+  });
+
   const { data: payments } = useQuery({
     queryKey: ['all-payments'],
     queryFn: async () => {
@@ -22,17 +40,71 @@ export const RevenueManagement = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('invoices')
-        .select('amount, status');
+        .select('*, organisations(name)');
       
       if (error) throw error;
       return data;
     }
   });
 
+  const unpaidInvoices = invoices?.filter((inv: any) => inv.status === 'sent' || inv.status === 'overdue');
+
   const totalRevenue = payments?.reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0) || 0;
   const paidInvoices = invoices?.filter((inv: any) => inv.status === 'paid').length || 0;
-  const pendingAmount = invoices?.filter((inv: any) => inv.status === 'sent')
+  const pendingAmount = invoices?.filter((inv: any) => inv.status === 'sent' || inv.status === 'overdue')
     .reduce((sum: number, inv: any) => sum + parseFloat(inv.amount), 0) || 0;
+
+  const recordPaymentMutation = useMutation({
+    mutationFn: async () => {
+      const invoice = invoices?.find((inv: any) => inv.id === selectedInvoice);
+      if (!invoice) throw new Error('Invoice not found');
+
+      // Insert payment
+      const { error: paymentError } = await supabase
+        .from('payments')
+        .insert({
+          organisation_id: invoice.organisation_id,
+          invoice_id: selectedInvoice,
+          amount: parseFloat(paymentData.amount),
+          payment_date: paymentData.paymentDate,
+          payment_method: paymentData.paymentMethod || null,
+          payment_reference: paymentData.paymentReference || null,
+          notes: paymentData.notes || null,
+          currency: invoice.currency || 'TZS'
+        });
+
+      if (paymentError) throw paymentError;
+
+      // Update invoice status to paid
+      const { error: invoiceError } = await supabase
+        .from('invoices')
+        .update({ 
+          status: 'paid',
+          paid_date: paymentData.paymentDate 
+        })
+        .eq('id', selectedInvoice);
+
+      if (invoiceError) throw invoiceError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['revenue-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['all-invoices'] });
+      setIsRecordPaymentOpen(false);
+      setSelectedInvoice("");
+      setPaymentData({
+        amount: "",
+        paymentDate: new Date().toISOString().split('T')[0],
+        paymentMethod: "",
+        paymentReference: "",
+        notes: ""
+      });
+      toast.success('Payment recorded and invoice marked as paid');
+    },
+    onError: (error) => {
+      toast.error('Failed to record payment: ' + error.message);
+    }
+  });
 
   return (
     <div className="space-y-6">
@@ -73,8 +145,97 @@ export const RevenueManagement = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent Payments</CardTitle>
-          <CardDescription>Payment history from all organizations</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Recent Payments</CardTitle>
+              <CardDescription>Payment history from all organizations</CardDescription>
+            </div>
+            <Dialog open={isRecordPaymentOpen} onOpenChange={setIsRecordPaymentOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Record Payment
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Record Payment</DialogTitle>
+                  <DialogDescription>Record a payment received from an organization</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Select Invoice</Label>
+                    <Select value={selectedInvoice} onValueChange={(value) => {
+                      setSelectedInvoice(value);
+                      const invoice = unpaidInvoices?.find((inv: any) => inv.id === value);
+                      if (invoice) {
+                        setPaymentData({ ...paymentData, amount: invoice.amount.toString() });
+                      }
+                    }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select invoice" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {unpaidInvoices?.map((invoice: any) => (
+                          <SelectItem key={invoice.id} value={invoice.id}>
+                            {invoice.invoice_number} - {invoice.organisations?.name} - {invoice.amount.toLocaleString()} {invoice.currency}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Amount</Label>
+                    <Input
+                      type="number"
+                      value={paymentData.amount}
+                      onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })}
+                      placeholder="50000"
+                    />
+                  </div>
+                  <div>
+                    <Label>Payment Date</Label>
+                    <Input
+                      type="date"
+                      value={paymentData.paymentDate}
+                      onChange={(e) => setPaymentData({ ...paymentData, paymentDate: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Payment Method</Label>
+                    <Input
+                      value={paymentData.paymentMethod}
+                      onChange={(e) => setPaymentData({ ...paymentData, paymentMethod: e.target.value })}
+                      placeholder="Bank Transfer, M-Pesa, etc."
+                    />
+                  </div>
+                  <div>
+                    <Label>Payment Reference</Label>
+                    <Input
+                      value={paymentData.paymentReference}
+                      onChange={(e) => setPaymentData({ ...paymentData, paymentReference: e.target.value })}
+                      placeholder="Transaction ID or reference number"
+                    />
+                  </div>
+                  <div>
+                    <Label>Notes</Label>
+                    <Input
+                      value={paymentData.notes}
+                      onChange={(e) => setPaymentData({ ...paymentData, notes: e.target.value })}
+                      placeholder="Optional notes"
+                    />
+                  </div>
+                  <Button 
+                    onClick={() => recordPaymentMutation.mutate()}
+                    disabled={!selectedInvoice || !paymentData.amount || recordPaymentMutation.isPending}
+                    className="w-full"
+                  >
+                    Record Payment
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
