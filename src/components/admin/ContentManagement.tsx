@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/use-role";
 import { useNavigate } from "react-router-dom";
 import { ContentFilters } from "./content/ContentFilters";
 import { ContentStats } from "./content/ContentStats";
@@ -28,6 +29,7 @@ interface ContentItem {
 
 export function ContentManagement() {
   const { user: currentUser } = useAuth();
+  const { isAdmin } = useRole();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   
@@ -92,6 +94,11 @@ export function ContentManagement() {
       const visibleForms = allForms?.filter(form => {
         // Own organization's forms
         if (form.organisation_id === currentUser.organisation_id) {
+          // Admins can see all content in their organization
+          if (isAdmin()) {
+            return true;
+          }
+          
           // Check if form has shares
           const formShares = shares?.filter(s => s.object_id === form.id) || [];
           
@@ -175,6 +182,11 @@ export function ContentManagement() {
       const visibleMaps = allMaps?.filter(map => {
         // Own organization's maps
         if (map.organisation_id === currentUser.organisation_id) {
+          // Admins can see all content in their organization
+          if (isAdmin()) {
+            return true;
+          }
+          
           // Check if map has shares
           const mapShares = shares?.filter(s => s.object_id === map.id) || [];
           
@@ -258,6 +270,11 @@ export function ContentManagement() {
       const visibleDashboards = allDashboards?.filter(dashboard => {
         // Own organization's dashboards
         if (dashboard.organisation_id === currentUser.organisation_id) {
+          // Admins can see all content in their organization
+          if (isAdmin()) {
+            return true;
+          }
+          
           // Check if dashboard is public
           if (dashboard.is_public) {
             return true;
