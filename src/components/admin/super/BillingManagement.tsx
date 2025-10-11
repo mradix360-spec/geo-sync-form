@@ -131,7 +131,7 @@ export const BillingManagement = () => {
     mutationFn: async () => {
       if (!selectedOrgForAuto || !billingPreview || billingPreview.length === 0) return;
 
-      const total = billingPreview[0]?.total || 0;
+      const total = billingPreview.reduce((sum, item) => sum + (item.subtotal || 0), 0);
       const lineItems = billingPreview.map(item => ({
         role: item.role,
         user_count: item.user_count,
@@ -247,7 +247,7 @@ export const BillingManagement = () => {
                         ))}
                         <div className="flex justify-between pt-2 border-t font-bold">
                           <span>Total Monthly</span>
-                          <span>{billingPreview[0]?.total.toLocaleString()} TZS</span>
+                          <span>{(billingPreview.reduce((s, i) => s + (i.subtotal || 0), 0)).toLocaleString()} TZS</span>
                         </div>
                       </div>
                     )}
