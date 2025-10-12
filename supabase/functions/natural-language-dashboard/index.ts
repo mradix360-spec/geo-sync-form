@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { query, userId, orgId } = await req.json();
+    const { query, userId, orgId, formIds } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -29,16 +29,11 @@ serve(async (req) => {
 
     console.log("Processing natural language query:", query);
 
-    let formsQuery = supabase
+    // Fetch only the selected forms
+    const { data: forms } = await supabase
       .from('forms')
       .select('id, title, schema')
-      .limit(20);
-
-    if (orgId) {
-      formsQuery = formsQuery.eq('organisation_id', orgId);
-    }
-
-    const { data: forms } = await formsQuery;
+      .in('id', formIds || []);
 
     // Fetch response data for each form to provide context
     const formsContext = await Promise.all((forms || []).map(async (f: any) => {
