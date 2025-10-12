@@ -69,45 +69,68 @@ serve(async (req) => {
       };
     }));
 
-    const systemPrompt = `You are a dashboard configuration expert. Convert natural language requests into dashboard configurations.
+    const systemPrompt = `You are an expert dashboard architect. Your goal is to create COMPREHENSIVE, INSIGHTFUL dashboards that tell a complete data story.
 
 Available forms with actual data: ${JSON.stringify(formsContext, null, 2)}
 
-IMPORTANT: Only create widgets for forms that have responseCount > 0. Use the actual field names from the fields array and sampleData.
+CRITICAL INSTRUCTIONS:
+1. Generate 4-8 diverse widgets that provide different perspectives on the data
+2. Analyze field types to suggest appropriate visualizations:
+   - Text/select fields → bar_chart, pie_chart for distribution
+   - Number fields → stat_card for totals/averages, line_chart for trends
+   - Date fields → line_chart for time series analysis
+   - Boolean fields → pie_chart for yes/no distribution
+3. Use sampleData to identify meaningful categories and create smart groupBy configurations
+4. Mix widget types for visual variety and comprehensive insights
+5. Position widgets in a 12-column grid layout (w: width 1-12, h: height 2-8)
 
-Generate a dashboard config with this structure:
+WIDGET TYPES & BEST USE CASES:
+- stat_card: KPIs, totals, averages (w:3-4, h:3-4)
+- quick_stats: Multiple related metrics (w:6-12, h:4-6)
+- bar_chart: Category comparisons, distributions (w:6, h:5-6)
+- pie_chart: Proportions, percentages (w:4-6, h:5)
+- line_chart: Trends over time (w:6-8, h:5-6)
+- data_table: Detailed records (w:6-12, h:6-8)
+- response_list: Recent activity (w:4-6, h:6)
+- map: Geographic visualization (w:6-12, h:6-8)
+
+WIDGET CONFIG STRUCTURE:
 {
-  "title": "Dashboard Title",
-  "description": "Brief description",
-  "widgets": [
-    {
-      "type": "stat_card|bar_chart|line_chart|pie_chart|data_table|quick_stats|response_list|map",
-      "title": "Widget Title",
-      "config": {
-        "formId": "form_id_from_available_forms",
-        "metric": "count|actual_field_name_from_form",
-        "groupBy": "actual_field_name_or_null",
-        "dateField": "created_at|actual_date_field_name",
-        "timeRange": "7d|30d|90d|all",
-        "aggregation": "count|sum|avg|min|max",
-        "filters": {}
-      },
-      "position": { "x": 0, "y": 0, "w": 6, "h": 4 }
-    }
-  ]
+  "type": "widget_type",
+  "title": "Clear, descriptive title",
+  "config": {
+    "formId": "actual_form_id",
+    "metric": "count|field_name",
+    "groupBy": "field_name|null",
+    "dateField": "created_at|date_field_name",
+    "timeRange": "7d|30d|90d|all",
+    "aggregation": "count|sum|avg|min|max",
+    "limit": 10,
+    "filters": {},
+    "columns": ["field1", "field2"] // for data_table
+  },
+  "position": { "x": 0, "y": 0, "w": 6, "h": 5 }
 }
 
-Widget selection guide based on data:
-- stat_card: Single metrics (total count, averages)
-- bar_chart: Compare categories from select/radio fields
-- line_chart: Trends over time using created_at
-- pie_chart: Proportions/distributions of categorical data
-- data_table: Detailed views with multiple fields
-- response_list: Recent submissions
-- map: Geographic data visualization
-- quick_stats: Multiple related metrics together
+LAYOUT STRATEGY:
+- Row 1: Key metrics (stat_card or quick_stats)
+- Row 2-3: Visual analytics (charts showing trends, distributions)
+- Row 4: Detailed data (data_table or response_list)
+- Use x coordinates: 0, 3, 6, 9 for proper grid alignment
+- Increment y based on previous widget heights
 
-Use the sampleData to understand what values exist in fields and create meaningful groupBy and filters.`;
+EXAMPLE PROACTIVE DASHBOARD:
+For a Water Quality form with pH, temperature, location fields:
+1. Total Samples stat_card (w:3, h:3)
+2. Average pH stat_card (w:3, h:3)
+3. Average Temp stat_card (w:3, h:3)
+4. Samples Over Time line_chart (w:9, h:5)
+5. pH Distribution bar_chart (w:6, h:5)
+6. Temperature by Location bar_chart (w:6, h:5)
+7. Sample Locations map (w:12, h:6)
+8. Recent Samples data_table (w:12, h:6)
+
+Now generate a comprehensive dashboard with 5-8 widgets based on the user's query and available data.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -121,7 +144,7 @@ Use the sampleData to understand what values exist in fields and create meaningf
           { role: "system", content: systemPrompt },
           { role: "user", content: query }
         ],
-        temperature: 0.2,
+        temperature: 0.7,
       }),
     });
 
@@ -161,20 +184,78 @@ Use the sampleData to understand what values exist in fields and create meaningf
       dashboardConfig = JSON.parse(candidate);
     } catch {}
 
-    if (!dashboardConfig || typeof dashboardConfig !== 'object') {
+    if (!dashboardConfig || typeof dashboardConfig !== 'object' || !dashboardConfig.widgets?.length) {
       const firstForm = forms?.[0];
-      dashboardConfig = {
-        title: "AI Dashboard",
-        description: `Auto-generated from query: ${query}`,
-        widgets: firstForm ? [
+      if (!firstForm) {
+        dashboardConfig = {
+          title: "AI Dashboard",
+          description: `Auto-generated from query: ${query}`,
+          widgets: []
+        };
+      } else {
+        // Generate a comprehensive fallback dashboard
+        const widgets: any[] = [
           {
             type: "stat_card",
             title: "Total Submissions",
             config: { formId: firstForm.id, metric: "count", groupBy: null, dateField: "created_at", timeRange: "30d" },
-            position: { x: 0, y: 0, w: 6, h: 4 }
+            position: { x: 0, y: 0, w: 3, h: 3 }
+          },
+          {
+            type: "response_list",
+            title: "Recent Responses",
+            config: { formId: firstForm.id, limit: 5, timeRange: "7d" },
+            position: { x: 3, y: 0, w: 4, h: 6 }
+          },
+          {
+            type: "line_chart",
+            title: "Submissions Over Time",
+            config: { formId: firstForm.id, metric: "count", dateField: "created_at", timeRange: "30d" },
+            position: { x: 7, y: 0, w: 5, h: 5 }
           }
-        ] : []
-      };
+        ];
+
+        // Add field-based widgets if available
+        const fields = firstForm.schema?.fields || [];
+        let yOffset = 6;
+
+        const selectFields = fields.filter((f: any) => ['select', 'radio'].includes(f.type));
+        if (selectFields.length > 0) {
+          widgets.push({
+            type: "bar_chart",
+            title: `${selectFields[0].label} Distribution`,
+            config: { formId: firstForm.id, metric: "count", groupBy: selectFields[0].name, timeRange: "30d" },
+            position: { x: 0, y: yOffset, w: 6, h: 5 }
+          });
+        }
+
+        const numberFields = fields.filter((f: any) => f.type === 'number');
+        if (numberFields.length > 0) {
+          widgets.push({
+            type: "stat_card",
+            title: `Average ${numberFields[0].label}`,
+            config: { formId: firstForm.id, metric: numberFields[0].name, aggregation: "avg", timeRange: "30d" },
+            position: { x: 6, y: yOffset, w: 3, h: 3 }
+          });
+        }
+
+        widgets.push({
+          type: "data_table",
+          title: "All Responses",
+          config: { 
+            formId: firstForm.id, 
+            columns: fields.slice(0, 5).map((f: any) => f.name),
+            limit: 20 
+          },
+          position: { x: 0, y: yOffset + 6, w: 12, h: 7 }
+        });
+
+        dashboardConfig = {
+          title: "AI Dashboard",
+          description: `Auto-generated from query: ${query}`,
+          widgets
+        };
+      }
     }
 
     return new Response(JSON.stringify(dashboardConfig), {
