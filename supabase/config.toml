@@ -1,16 +1,16 @@
 project_id = "shqclgwsgmlnimcggxch"
 
 [functions.analyze-photo]
-verify_jwt = true
+verify_jwt = false
 
 [functions.natural-language-dashboard]
-verify_jwt = true
+verify_jwt = false
 
 [functions.optimize-route]
-verify_jwt = true
+verify_jwt = false
 
 [functions.detect-anomalies]
-verify_jwt = true
+verify_jwt = false
 
 [functions.export-geojson]
 verify_jwt = true

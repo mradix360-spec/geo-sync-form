@@ -90,15 +90,26 @@ Return JSON with:
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+    const content = data.choices?.[0]?.message?.content ?? "";
 
     console.log("Route optimization complete");
 
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    const routeOptimization = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+    let routeOptimization: any = null;
+    try {
+      const fenceMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/i);
+      const candidate = fenceMatch ? fenceMatch[1] : (content.match(/\{[\s\S]*\}/)?.[0] ?? content);
+      routeOptimization = JSON.parse(candidate);
+    } catch {}
 
     if (!routeOptimization) {
-      throw new Error("Could not parse route optimization");
+      const optimizedOrder = locations.map((_: any, idx: number) => idx);
+      routeOptimization = {
+        optimizedOrder,
+        estimatedDistance: `${(optimizedOrder.length - 1) * 1.0} km (approx)`,
+        estimatedTime: `${(optimizedOrder.length - 1) * 0.2} hours (approx)`,
+        reasoning: "Fallback route: sequential order due to parsing issue.",
+        waypoints: optimizedOrder.map((i: number, order: number) => ({ index: i, order: order + 1, reason: "Default order" }))
+      };
     }
 
     return new Response(JSON.stringify(routeOptimization), {

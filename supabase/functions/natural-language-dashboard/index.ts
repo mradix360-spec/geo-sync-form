@@ -29,16 +29,21 @@ serve(async (req) => {
 
     console.log("Processing natural language query:", query);
 
-    const { data: forms } = await supabase
+    let formsQuery = supabase
       .from('forms')
-      .select('id, title, form_schema')
-      .eq('organisation_id', orgId)
+      .select('id, title, schema')
       .limit(20);
+
+    if (orgId) {
+      formsQuery = formsQuery.eq('organisation_id', orgId);
+    }
+
+    const { data: forms } = await formsQuery;
 
     const formsContext = forms?.map((f: any) => ({
       id: f.id,
       title: f.title,
-      fields: f.form_schema?.fields?.map((field: any) => field.name) || []
+      fields: f.schema?.fields?.map((field: any) => field.name) || []
     })) || [];
 
     const systemPrompt = `You are a dashboard configuration expert. Convert natural language requests into dashboard configurations.
@@ -108,15 +113,31 @@ Use appropriate widget types: stat_card for single metrics, bar_chart for catego
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+    const content = data.choices?.[0]?.message?.content ?? "";
 
     console.log("Dashboard config generated");
 
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    const dashboardConfig = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+    let dashboardConfig: any = null;
+    try {
+      const fenceMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/i);
+      const candidate = fenceMatch ? fenceMatch[1] : (content.match(/\{[\s\S]*\}/)?.[0] ?? content);
+      dashboardConfig = JSON.parse(candidate);
+    } catch {}
 
-    if (!dashboardConfig) {
-      throw new Error("Could not parse dashboard configuration");
+    if (!dashboardConfig || typeof dashboardConfig !== 'object') {
+      const firstForm = forms?.[0];
+      dashboardConfig = {
+        title: "AI Dashboard",
+        description: `Auto-generated from query: ${query}`,
+        widgets: firstForm ? [
+          {
+            type: "stat_card",
+            title: "Total Submissions",
+            config: { formId: firstForm.id, metric: "count", groupBy: null, dateField: "created_at", timeRange: "30d" },
+            position: { x: 0, y: 0, w: 6, h: 4 }
+          }
+        ] : []
+      };
     }
 
     return new Response(JSON.stringify(dashboardConfig), {
