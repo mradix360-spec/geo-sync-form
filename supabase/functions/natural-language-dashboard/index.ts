@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { query, userId, orgId, formIds } = await req.json();
+    const { query, userId, orgId, formIds, createSingleWidget } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -69,7 +69,46 @@ serve(async (req) => {
       };
     }));
 
-    const systemPrompt = `You are an expert dashboard architect. Your goal is to create COMPREHENSIVE, INSIGHTFUL dashboards that tell a complete data story.
+    const isCustomWidget = createSingleWidget === true;
+    
+    const systemPrompt = isCustomWidget 
+      ? `You are an expert widget designer. Create a SINGLE, FOCUSED widget based on the user's request.
+
+Available forms with actual data: ${JSON.stringify(formsContext, null, 2)}
+
+CRITICAL INSTRUCTIONS:
+1. Generate ONLY ONE widget that precisely matches the user's request
+2. Analyze the available forms and their fields to create an appropriate visualization
+3. Choose the best widget type for the requested data:
+   - Text/select fields → bar_chart, pie_chart for distribution
+   - Number fields → stat_card for totals/averages, line_chart for trends
+   - Date fields → line_chart for time series
+   - Boolean fields → pie_chart for yes/no distribution
+   - Geographic data → map widget
+4. Include a clear, descriptive title
+5. Set appropriate position (default: { x: 0, y: 0, w: 6, h: 5 })
+
+WIDGET CONFIG STRUCTURE (CRITICAL - FOLLOW EXACTLY):
+{
+  "id": "unique_id_string", // REQUIRED: Use random string like "w_abc123"
+  "type": "widget_type",
+  "title": "Clear, descriptive title",
+  "config": {
+    "formId": "actual_form_id",
+    "metric": "count|field_name",
+    "groupBy": "field_name|null",
+    "dateField": "created_at|date_field_name",
+    "timeRange": "7d|30d|90d|all",
+    "aggregation": "count|sum|avg|min|max",
+    "limit": 10,
+    "filters": {},
+    "columns": ["field1", "field2"] // for data_table
+  },
+  "position": { "x": 0, "y": 0, "w": 6, "h": 5 }
+}
+
+Return ONLY the widget object (not wrapped in a dashboard config).`
+      : `You are an expert dashboard architect. Your goal is to create COMPREHENSIVE, INSIGHTFUL dashboards that tell a complete data story.
 
 Available forms with actual data: ${JSON.stringify(formsContext, null, 2)}
 
@@ -133,6 +172,7 @@ For a Water Quality form with pH, temperature, location fields:
 
 Now generate a comprehensive dashboard with 5-8 widgets based on the user's query and available data.`;
 
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -184,7 +224,23 @@ Now generate a comprehensive dashboard with 5-8 widgets based on the user's quer
     try {
       const fenceMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/i);
       const candidate = fenceMatch ? fenceMatch[1] : (content.match(/\{[\s\S]*\}/)?.[0] ?? content);
-      dashboardConfig = JSON.parse(candidate);
+      const parsed = JSON.parse(candidate);
+      
+      // Handle single widget creation
+      if (isCustomWidget) {
+        const widget = parsed.type ? parsed : parsed.widgets?.[0];
+        if (!widget) {
+          throw new Error("No widget generated");
+        }
+        
+        return new Response(JSON.stringify({ 
+          widgets: [widget]
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
+      dashboardConfig = parsed;
       
       // Extract and save custom widgets
       if (dashboardConfig.customWidgets?.length > 0) {
