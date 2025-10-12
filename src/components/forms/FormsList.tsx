@@ -6,11 +6,21 @@ import { useRole } from "@/hooks/use-role";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Map, Plus, MapPin, Calendar, Users, Download, FormInput, Share2, Layers } from "lucide-react";
+import { Map, Plus, MapPin, Calendar, Users, Download, FormInput, Share2, Layers, Pencil, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { FormAssignmentDialog } from "@/components/FormAssignmentDialog";
 import { SharePermissionDialog } from "./SharePermissionDialog";
 import { GISIntegrationDialog } from "./GISIntegrationDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Form {
   id: string;
@@ -47,6 +57,8 @@ export const FormsList = ({
   const [gisFormId, setGisFormId] = useState<string | null>(null);
   const [gisFormTitle, setGisFormTitle] = useState<string>("");
   const [gisShareToken, setGisShareToken] = useState<string | undefined>();
+  const [deleteFormId, setDeleteFormId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Use external data if provided, otherwise use internal state
   const forms = externalForms ?? internalForms;
@@ -278,6 +290,63 @@ export const FormsList = ({
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteFormId) return;
+    
+    setIsDeleting(true);
+    try {
+      // Delete associated shares first
+      await supabase
+        .from('shares')
+        .delete()
+        .eq('object_id', deleteFormId)
+        .eq('object_type', 'form');
+
+      // Delete form responses
+      await supabase
+        .from('form_responses')
+        .delete()
+        .eq('form_id', deleteFormId);
+
+      // Delete form assignments
+      await supabase
+        .from('form_assignments')
+        .delete()
+        .eq('form_id', deleteFormId);
+
+      // Delete the form
+      const { error } = await supabase
+        .from('forms')
+        .delete()
+        .eq('id', deleteFormId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Form deleted",
+        description: "The form has been successfully deleted.",
+      });
+
+      // Reload forms
+      if (externalForms) {
+        // If using external forms, just close dialog and let parent handle refresh
+        setDeleteFormId(null);
+      } else {
+        // If using internal forms, reload
+        await loadForms();
+        setDeleteFormId(null);
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error deleting form",
+        description: error.message,
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -441,6 +510,24 @@ export const FormsList = ({
                   </Button>
                 </>
               )}
+              {canCreateForms() && (
+                <>
+                  <Button variant="outline" size="sm" onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/form-builder/${form.id}`);
+                  }}>
+                    <Pencil className="w-3 h-3 mr-1" />
+                    Edit
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteFormId(form.id);
+                  }}>
+                    <Trash2 className="w-3 h-3 mr-1" />
+                    Delete
+                  </Button>
+                </>
+              )}
             </CardFooter>
           </Card>
         ))}
@@ -484,6 +571,23 @@ export const FormsList = ({
           onTokenRegenerated={() => handleGISIntegration(gisFormId, gisFormTitle)}
         />
       )}
+
+      <AlertDialog open={!!deleteFormId} onOpenChange={(open) => !open && setDeleteFormId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this form and all its responses. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
