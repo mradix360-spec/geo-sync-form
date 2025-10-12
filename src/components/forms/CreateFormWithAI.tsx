@@ -142,6 +142,11 @@ export const CreateFormWithAI = () => {
               rows={4}
               className="resize-none"
             />
+            {!prompt.trim() && (
+              <p className="text-sm text-muted-foreground">
+                Please describe what kind of form you want to create
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
