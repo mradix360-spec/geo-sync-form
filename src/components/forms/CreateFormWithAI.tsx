@@ -69,12 +69,19 @@ export const CreateFormWithAI = () => {
         ? null 
         : data.geometry_type;
 
+      const formSchema = {
+        sections: data.sections || [{ id: 'section_1', title: 'Basic Information', collapsible: false, pageNumber: 1 }],
+        fields: data.fields,
+        multiPage: data.multiPage || false,
+        totalPages: data.totalPages || 1,
+      };
+
       const { data: newForm, error: insertError } = await supabase
         .from("forms")
         .insert({
           title: data.title,
           description: data.description || "",
-          schema: { fields: data.fields },
+          schema: formSchema,
           geometry_type: geometryType,
           organisation_id: user.organisation_id,
           created_by: user.id,

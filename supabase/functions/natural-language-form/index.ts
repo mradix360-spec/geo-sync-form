@@ -30,6 +30,7 @@ CRITICAL INSTRUCTIONS:
    - Whether geographic data is needed (geometry_type)
    - What fields are required vs optional
    - Appropriate field types for each piece of information
+   - Whether the form should have multiple pages for better UX
 
 3. Field types available:
    - text: Short text input (names, IDs, short answers)
@@ -48,16 +49,39 @@ CRITICAL INSTRUCTIONS:
    - Polygon: Areas, zones, regions
    - null: No geographic data
 
-5. Field naming conventions:
+5. Multi-Page Forms:
+   - For surveys with 8+ fields, create multiple pages for better UX
+   - Group related fields into logical pages
+   - Each page should have 3-7 fields
+   - Pages flow logically through the data collection process
+   - Example: Page 1 (Basic Info) → Page 2 (Details) → Page 3 (Additional)
+
+6. Field naming conventions:
    - Use snake_case for field names (e.g., "water_quality", "sample_date")
    - Make names descriptive but concise
    - Avoid spaces and special characters
+
+7. Sections within pages:
+   - Each page can have multiple sections to organize fields
+   - Sections help group related fields together
+   - Section titles should be clear and descriptive
 
 FORM SCHEMA STRUCTURE (CRITICAL - FOLLOW EXACTLY):
 {
   "title": "Clear form title",
   "description": "Brief description of the form's purpose",
   "geometry_type": "Point|LineString|Polygon|null",
+  "multiPage": true|false,
+  "totalPages": 1|2|3|etc,
+  "sections": [
+    {
+      "id": "section_1",
+      "title": "Section Title",
+      "description": "Optional section description",
+      "collapsible": false,
+      "pageNumber": 1
+    }
+  ],
   "fields": [
     {
       "name": "field_name_snake_case",
@@ -65,100 +89,98 @@ FORM SCHEMA STRUCTURE (CRITICAL - FOLLOW EXACTLY):
       "type": "text|textarea|number|select|radio|checkbox|date|time|file",
       "required": true|false,
       "placeholder": "Optional placeholder text",
-      "options": ["option1", "option2"] // Only for select, radio, checkbox
+      "options": ["option1", "option2"], // Only for select, radio, checkbox
+      "sectionId": "section_1"
     }
   ]
 }
 
 BEST PRACTICES:
 - Include 5-15 fields depending on complexity
+- For 8+ fields, use multiple pages (typically 2-3 pages)
 - Mark critical fields as required
 - Provide helpful placeholder text
 - For select/radio/checkbox, include realistic options
-- Add validation-friendly field names
+- Group related fields in the same section/page
 - Consider the data collection workflow
 
-EXAMPLES:
+MULTI-PAGE EXAMPLE:
 
-User: "Create a water quality survey"
+User: "Create a comprehensive customer satisfaction survey"
 Response:
 {
-  "title": "Water Quality Assessment Form",
-  "description": "Collect water quality data including pH, temperature, and contamination levels",
-  "geometry_type": "Point",
+  "title": "Customer Satisfaction Survey",
+  "description": "We value your feedback! Help us improve by sharing your experience.",
+  "geometry_type": null,
+  "multiPage": true,
+  "totalPages": 3,
+  "sections": [
+    {
+      "id": "section_1",
+      "title": "About Your Visit",
+      "collapsible": false,
+      "pageNumber": 1
+    },
+    {
+      "id": "section_2",
+      "title": "Service Quality",
+      "collapsible": false,
+      "pageNumber": 2
+    },
+    {
+      "id": "section_3",
+      "title": "Additional Feedback",
+      "collapsible": false,
+      "pageNumber": 3
+    }
+  ],
   "fields": [
     {
-      "name": "sample_id",
-      "label": "Sample ID",
-      "type": "text",
-      "required": true,
-      "placeholder": "e.g., WQ-2024-001"
-    },
-    {
-      "name": "sample_date",
-      "label": "Sample Date",
+      "name": "visit_date",
+      "label": "Date of Visit",
       "type": "date",
-      "required": true
+      "required": true,
+      "sectionId": "section_1"
     },
     {
-      "name": "sample_time",
-      "label": "Sample Time",
-      "type": "time",
-      "required": true
-    },
-    {
-      "name": "water_source",
-      "label": "Water Source",
+      "name": "service_type",
+      "label": "What service did you use?",
       "type": "select",
       "required": true,
-      "options": ["River", "Lake", "Well", "Tap Water", "Other"]
+      "options": ["In-Store", "Online", "Phone Support", "Other"],
+      "sectionId": "section_1"
     },
     {
-      "name": "ph_level",
-      "label": "pH Level",
-      "type": "number",
-      "required": true,
-      "placeholder": "0-14"
-    },
-    {
-      "name": "temperature",
-      "label": "Temperature (°C)",
-      "type": "number",
-      "required": true
-    },
-    {
-      "name": "turbidity",
-      "label": "Turbidity",
-      "type": "select",
-      "required": true,
-      "options": ["Clear", "Slightly Cloudy", "Cloudy", "Very Cloudy"]
-    },
-    {
-      "name": "contamination_visible",
-      "label": "Visible Contamination",
+      "name": "overall_satisfaction",
+      "label": "Overall Satisfaction",
       "type": "radio",
       "required": true,
-      "options": ["Yes", "No"]
+      "options": ["Very Dissatisfied", "Dissatisfied", "Neutral", "Satisfied", "Very Satisfied"],
+      "sectionId": "section_2"
     },
     {
-      "name": "contamination_types",
-      "label": "Types of Contamination",
-      "type": "checkbox",
-      "required": false,
-      "options": ["Oil/Grease", "Algae", "Debris", "Foam", "Discoloration", "Other"]
+      "name": "staff_helpful",
+      "label": "Staff Helpfulness",
+      "type": "radio",
+      "required": true,
+      "options": ["Poor", "Fair", "Good", "Excellent"],
+      "sectionId": "section_2"
     },
     {
-      "name": "sample_photo",
-      "label": "Sample Photo",
-      "type": "file",
-      "required": false
+      "name": "would_recommend",
+      "label": "Would you recommend us?",
+      "type": "radio",
+      "required": true,
+      "options": ["Yes", "No", "Maybe"],
+      "sectionId": "section_3"
     },
     {
-      "name": "notes",
-      "label": "Additional Notes",
+      "name": "comments",
+      "label": "Additional Comments",
       "type": "textarea",
       "required": false,
-      "placeholder": "Any observations or additional information"
+      "placeholder": "Share any additional thoughts...",
+      "sectionId": "section_3"
     }
   ]
 }
@@ -226,7 +248,19 @@ Now create a comprehensive form based on the user's request.`;
       throw new Error("Invalid form schema generated");
     }
 
-    // Ensure all required field properties exist
+    // Process sections
+    let sections = formSchema.sections;
+    if (!sections || !Array.isArray(sections) || sections.length === 0) {
+      sections = [{
+        id: 'section_1',
+        title: 'Basic Information',
+        collapsible: false,
+        pageNumber: 1
+      }];
+    }
+
+    // Ensure all fields have sectionId
+    const firstSectionId = sections[0]?.id || 'section_1';
     formSchema.fields = formSchema.fields.map((field: any) => ({
       name: field.name || 'unnamed_field',
       label: field.label || field.name || 'Unnamed Field',
@@ -234,9 +268,21 @@ Now create a comprehensive form based on the user's request.`;
       required: field.required === true,
       placeholder: field.placeholder || '',
       options: field.options || undefined,
+      sectionId: field.sectionId || firstSectionId,
     }));
 
-    return new Response(JSON.stringify(formSchema), {
+    // Include sections and multi-page settings in response
+    const responseSchema = {
+      title: formSchema.title,
+      description: formSchema.description,
+      geometry_type: formSchema.geometry_type,
+      multiPage: formSchema.multiPage || false,
+      totalPages: formSchema.totalPages || 1,
+      sections: sections,
+      fields: formSchema.fields,
+    };
+
+    return new Response(JSON.stringify(responseSchema), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
