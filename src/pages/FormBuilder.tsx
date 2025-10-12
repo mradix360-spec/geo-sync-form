@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -60,6 +60,7 @@ interface FormField {
 const FormBuilder = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { formId } = useParams<{ formId?: string }>();
   const [saving, setSaving] = useState(false);
 
   const handleBack = () => {
@@ -70,14 +71,67 @@ const FormBuilder = () => {
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [geometryType, setGeometryType] = useState("Point");
-  const [sections, setSections] = useState<Section[]>([
-    { id: "section_1", title: "Basic Information", collapsible: false, pageNumber: 1 }
-  ]);
-  const [fields, setFields] = useState<FormField[]>([
-    { id: "1", name: "field_1", label: "Field 1", type: "text", required: false, readonly: false, sectionId: "section_1" }
-  ]);
+const [sections, setSections] = useState<Section[]>([
+  { id: "section_1", title: "Basic Information", collapsible: false, pageNumber: 1 }
+]);
+const [fields, setFields] = useState<FormField[]>([
+  { id: "1", name: "field_1", label: "Field 1", type: "text", required: false, readonly: false, sectionId: "section_1" }
+]);
   const [multiPage, setMultiPage] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
+
+  // Load existing form when editing
+  useEffect(() => {
+    const loadForm = async () => {
+      if (!formId) return;
+      try {
+        const { data, error } = await supabase
+          .from('forms')
+          .select('*')
+          .eq('id', formId)
+          .single();
+        if (error) throw error;
+
+        setFormTitle(data.title || '');
+        setFormDescription(data.description || '');
+        setGeometryType(data.geometry_type ? data.geometry_type : 'None');
+
+        const schema = (data.schema || {}) as any;
+        const schemaSections: Section[] = Array.isArray(schema.sections) && schema.sections.length
+          ? schema.sections
+          : [{ id: 'section_1', title: 'Basic Information', collapsible: false, pageNumber: 1 }];
+        setSections(schemaSections);
+
+        const firstSectionId = schemaSections[0]?.id || 'section_1';
+        const schemaFields = Array.isArray(schema.fields) ? schema.fields : [];
+        const mappedFields: FormField[] = schemaFields.map((f: any, idx: number) => ({
+          id: String(idx + 1),
+          name: f.name,
+          label: f.label ?? f.name,
+          type: f.type ?? 'text',
+          required: !!f.required,
+          options: f.options,
+          accept: f.accept,
+          maxSize: f.maxSize,
+          validation: f.validation,
+          conditions: f.conditions,
+          conditionLogic: f.conditionLogic,
+          calculation: f.calculation,
+          readonly: !!f.readonly,
+          sectionId: f.sectionId || firstSectionId,
+        }));
+        setFields(mappedFields.length ? mappedFields : [
+          { id: '1', name: 'field_1', label: 'Field 1', type: 'text', required: false, readonly: false, sectionId: firstSectionId }
+        ]);
+
+        if (typeof schema.multiPage === 'boolean') setMultiPage(schema.multiPage);
+        if (typeof schema.totalPages === 'number') setTotalPages(schema.totalPages);
+      } catch (e) {
+        console.error('Failed to load form', e);
+      }
+    };
+    loadForm();
+  }, [formId]);
 
   const addSection = (pageNumber: number = 1) => {
     const newId = `section_${sections.length + 1}`;
@@ -154,22 +208,34 @@ const FormBuilder = () => {
         totalPages,
       };
 
-      const { data, error } = await supabase
-        .from("forms")
-        .insert([{
-          title: formTitle,
-          description: formDescription,
-          schema: schema as any,
-          geometry_type: geometryType,
-          organisation_id: user?.organisation_id,
-          created_by: user?.id,
-          is_published: true,
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
+      // Save or update form
+      if (formId) {
+        const { error } = await supabase
+          .from("forms")
+          .update({
+            title: formTitle,
+            description: formDescription,
+            schema: schema as any,
+            geometry_type: geometryType === 'None' ? null : geometryType,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', formId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("forms")
+          .insert([{
+            title: formTitle,
+            description: formDescription,
+            schema: schema as any,
+            geometry_type: geometryType === 'None' ? null : geometryType,
+            organisation_id: user?.organisation_id,
+            created_by: user?.id,
+            is_published: true,
+          }]);
+        if (error) throw error;
+      }
+      
       toast({
         title: "Form created!",
         description: "Your form has been created successfully",
