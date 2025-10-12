@@ -15,6 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { LocationAccuracy } from "@/components/shared/LocationAccuracy";
 import { GeometryDrawer } from "@/components/forms/GeometryDrawer";
+import { Star } from "lucide-react";
 
 interface ValidationRule {
   type: 'min' | 'max' | 'pattern' | 'minLength' | 'maxLength';
@@ -50,6 +51,7 @@ interface FormField {
   options?: string[];
   accept?: string;
   maxSize?: number;
+  maxStars?: number;
   conditions?: Condition[];
   conditionLogic?: 'AND' | 'OR';
   calculation?: Calculation;
@@ -828,6 +830,34 @@ const FormSubmit = () => {
                             </span>
                           )}
                         </div>
+                      )}
+                    </div>
+                  ) : field.type === 'rating' ? (
+                    <div className="flex gap-1">
+                      {Array.from({ length: field.maxStars || 5 }).map((_, index) => {
+                        const rating = index + 1;
+                        const currentRating = parseInt(formData[field.name] || '0');
+                        return (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, [field.name]: rating.toString() })}
+                            className="focus:outline-none transition-transform hover:scale-110"
+                          >
+                            <Star
+                              className={`w-8 h-8 ${
+                                rating <= currentRating
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : 'fill-none text-muted-foreground'
+                              }`}
+                            />
+                          </button>
+                        );
+                      })}
+                      {formData[field.name] && (
+                        <span className="ml-2 text-sm text-muted-foreground self-center">
+                          {formData[field.name]} / {field.maxStars || 5}
+                        </span>
                       )}
                     </div>
                   ) : (

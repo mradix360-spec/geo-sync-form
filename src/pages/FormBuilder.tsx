@@ -50,6 +50,7 @@ interface FormField {
   options?: string[]; // For select fields
   accept?: string; // For file fields
   maxSize?: number; // For file fields in MB
+  maxStars?: number; // For rating fields
   conditions?: Condition[]; // For conditional visibility
   conditionLogic?: 'AND' | 'OR'; // How to combine multiple conditions
   calculation?: Calculation; // For calculated fields
@@ -447,6 +448,7 @@ const [fields, setFields] = useState<FormField[]>([
                               <SelectItem value="select">Select</SelectItem>
                               <SelectItem value="textarea">Text Area</SelectItem>
                               <SelectItem value="file">File Upload</SelectItem>
+                              <SelectItem value="rating">Rating</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -495,6 +497,21 @@ const [fields, setFields] = useState<FormField[]>([
                                 onChange={(e) => updateField(field.id, { maxSize: parseInt(e.target.value) })}
                               />
                             </div>
+                          </div>
+                        )}
+
+                        {/* Rating Settings */}
+                        {field.type === 'rating' && (
+                          <div className="col-span-2 space-y-2">
+                            <Label>Maximum Stars</Label>
+                            <Input
+                              type="number"
+                              min="3"
+                              max="10"
+                              value={field.maxStars || 5}
+                              onChange={(e) => updateField(field.id, { maxStars: parseInt(e.target.value) })}
+                              placeholder="Default: 5"
+                            />
                           </div>
                         )}
 

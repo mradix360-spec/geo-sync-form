@@ -42,6 +42,7 @@ CRITICAL INSTRUCTIONS:
    - date: Date picker
    - time: Time picker
    - file: File upload (photos, documents)
+   - rating: Star rating (satisfaction scores, quality ratings)
 
 4. Geometry types (if location/map data needed):
    - Point: Single location
