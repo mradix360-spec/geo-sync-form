@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { DashboardsList } from "@/components/dashboards/DashboardsList";
 import { NaturalLanguageDashboard } from "@/components/ai/NaturalLanguageDashboard";
+import { CustomWidgetsList } from "@/components/dashboards/CustomWidgetsList";
 
 const DashboardsView = () => {
   const navigate = useNavigate();
@@ -21,6 +22,8 @@ const DashboardsView = () => {
       </div>
 
       <NaturalLanguageDashboard />
+
+      <CustomWidgetsList />
 
       <DashboardsList />
     </div>

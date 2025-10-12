@@ -94,8 +94,9 @@ WIDGET TYPES & BEST USE CASES:
 - response_list: Recent activity (w:4-6, h:6)
 - map: Geographic visualization (w:6-12, h:6-8)
 
-WIDGET CONFIG STRUCTURE:
+WIDGET CONFIG STRUCTURE (CRITICAL - FOLLOW EXACTLY):
 {
+  "id": "unique_id_string", // REQUIRED: Use random string like "w_abc123"
   "type": "widget_type",
   "title": "Clear, descriptive title",
   "config": {
@@ -178,10 +179,32 @@ Now generate a comprehensive dashboard with 5-8 widgets based on the user's quer
     console.log("Dashboard config generated");
 
     let dashboardConfig: any = null;
+    let customWidgets: any[] = [];
+    
     try {
       const fenceMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/i);
       const candidate = fenceMatch ? fenceMatch[1] : (content.match(/\{[\s\S]*\}/)?.[0] ?? content);
       dashboardConfig = JSON.parse(candidate);
+      
+      // Extract and save custom widgets
+      if (dashboardConfig.customWidgets?.length > 0) {
+        customWidgets = dashboardConfig.customWidgets;
+        delete dashboardConfig.customWidgets;
+        
+        // Save custom widgets to database
+        for (const widget of customWidgets) {
+          await supabase
+            .from('custom_widgets')
+            .insert({
+              organisation_id: orgId,
+              name: widget.name,
+              description: widget.description,
+              widget_type: widget.type,
+              config: widget.config,
+              created_by: userId
+            });
+        }
+      }
     } catch {}
 
     if (!dashboardConfig || typeof dashboardConfig !== 'object' || !dashboardConfig.widgets?.length) {
@@ -194,20 +217,25 @@ Now generate a comprehensive dashboard with 5-8 widgets based on the user's quer
         };
       } else {
         // Generate a comprehensive fallback dashboard
+        const generateId = () => Math.random().toString(36).substring(2, 15);
+        
         const widgets: any[] = [
           {
+            id: generateId(),
             type: "stat_card",
             title: "Total Submissions",
             config: { formId: firstForm.id, metric: "count", groupBy: null, dateField: "created_at", timeRange: "30d" },
             position: { x: 0, y: 0, w: 3, h: 3 }
           },
           {
+            id: generateId(),
             type: "response_list",
             title: "Recent Responses",
             config: { formId: firstForm.id, limit: 5, timeRange: "7d" },
             position: { x: 3, y: 0, w: 4, h: 6 }
           },
           {
+            id: generateId(),
             type: "line_chart",
             title: "Submissions Over Time",
             config: { formId: firstForm.id, metric: "count", dateField: "created_at", timeRange: "30d" },
@@ -222,6 +250,7 @@ Now generate a comprehensive dashboard with 5-8 widgets based on the user's quer
         const selectFields = fields.filter((f: any) => ['select', 'radio'].includes(f.type));
         if (selectFields.length > 0) {
           widgets.push({
+            id: generateId(),
             type: "bar_chart",
             title: `${selectFields[0].label} Distribution`,
             config: { formId: firstForm.id, metric: "count", groupBy: selectFields[0].name, timeRange: "30d" },
@@ -232,6 +261,7 @@ Now generate a comprehensive dashboard with 5-8 widgets based on the user's quer
         const numberFields = fields.filter((f: any) => f.type === 'number');
         if (numberFields.length > 0) {
           widgets.push({
+            id: generateId(),
             type: "stat_card",
             title: `Average ${numberFields[0].label}`,
             config: { formId: firstForm.id, metric: numberFields[0].name, aggregation: "avg", timeRange: "30d" },
@@ -240,6 +270,7 @@ Now generate a comprehensive dashboard with 5-8 widgets based on the user's quer
         }
 
         widgets.push({
+          id: generateId(),
           type: "data_table",
           title: "All Responses",
           config: { 
@@ -256,6 +287,13 @@ Now generate a comprehensive dashboard with 5-8 widgets based on the user's quer
           widgets
         };
       }
+    } else {
+      // Ensure all widgets have IDs
+      const generateId = () => Math.random().toString(36).substring(2, 15);
+      dashboardConfig.widgets = dashboardConfig.widgets.map((w: any) => ({
+        ...w,
+        id: w.id || generateId()
+      }));
     }
 
     return new Response(JSON.stringify(dashboardConfig), {

@@ -48,7 +48,10 @@ export const WidgetRenderer = ({ widget, onUpdate, onDelete, onDuplicate }: Widg
   };
 
   const renderWidget = () => {
-    switch (type) {
+    // Normalize widget type (handle both underscore and hyphen formats)
+    const normalizedType = type.replace(/_/g, '-');
+    
+    switch (normalizedType) {
       case "spatial-filter":
         return <SpatialFilterWidget key={refreshKey} />;
       case "attribute-filter":
@@ -62,6 +65,7 @@ export const WidgetRenderer = ({ widget, onUpdate, onDelete, onDuplicate }: Widg
       case "line-chart":
         return <LineChartWidget key={refreshKey} config={config} onUpdate={onUpdate} />;
       case "map-widget":
+      case "map":
         return <MapWidget key={refreshKey} config={config} onUpdate={onUpdate} />;
       case "response-list":
         return <ResponseListWidget key={refreshKey} config={config} onUpdate={onUpdate} />;
@@ -70,6 +74,7 @@ export const WidgetRenderer = ({ widget, onUpdate, onDelete, onDuplicate }: Widg
       case "activity-feed":
         return <ActivityFeedWidget key={refreshKey} config={config} onUpdate={onUpdate} />;
       case "calendar-widget":
+      case "calendar":
         return <CalendarWidget key={refreshKey} config={config} onUpdate={onUpdate} />;
       case "user-stats":
         return <UserStatsWidget key={refreshKey} config={config} onUpdate={onUpdate} />;
@@ -80,7 +85,12 @@ export const WidgetRenderer = ({ widget, onUpdate, onDelete, onDuplicate }: Widg
       case "quick-stats":
         return <QuickStatsWidget key={refreshKey} config={config} onUpdate={onUpdate} />;
       default:
-        return <div className="p-4 text-muted-foreground">Unknown widget type: {type}</div>;
+        return (
+          <div className="p-4">
+            <p className="text-sm text-muted-foreground mb-2">Unknown widget: {type}</p>
+            <p className="text-xs text-muted-foreground">Config: {JSON.stringify(config, null, 2)}</p>
+          </div>
+        );
     }
   };
 
