@@ -64,13 +64,18 @@ export const CreateFormWithAI = () => {
       }
 
       // Create the form in the database
+      // Convert string "null" to actual null
+      const geometryType = data.geometry_type === "null" || !data.geometry_type 
+        ? null 
+        : data.geometry_type;
+
       const { data: newForm, error: insertError } = await supabase
         .from("forms")
         .insert({
           title: data.title,
           description: data.description || "",
           schema: { fields: data.fields },
-          geometry_type: data.geometry_type || null,
+          geometry_type: geometryType,
           organisation_id: user.organisation_id,
           created_by: user.id,
           status: 'draft',
