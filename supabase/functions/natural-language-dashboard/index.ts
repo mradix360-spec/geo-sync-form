@@ -40,15 +40,45 @@ serve(async (req) => {
 
     const { data: forms } = await formsQuery;
 
-    const formsContext = forms?.map((f: any) => ({
-      id: f.id,
-      title: f.title,
-      fields: f.schema?.fields?.map((field: any) => field.name) || []
-    })) || [];
+    // Fetch response data for each form to provide context
+    const formsContext = await Promise.all((forms || []).map(async (f: any) => {
+      const { data: responses, count } = await supabase
+        .from('form_responses')
+        .select('geojson', { count: 'exact' })
+        .eq('form_id', f.id)
+        .limit(5);
+
+      const fields = f.schema?.fields?.map((field: any) => ({
+        name: field.name,
+        label: field.label,
+        type: field.type,
+        required: field.required
+      })) || [];
+
+      // Extract sample values from responses
+      const sampleData: Record<string, any[]> = {};
+      responses?.forEach((r: any) => {
+        const props = r.geojson?.properties || {};
+        Object.keys(props).forEach(key => {
+          if (!sampleData[key]) sampleData[key] = [];
+          if (sampleData[key].length < 3) sampleData[key].push(props[key]);
+        });
+      });
+
+      return {
+        id: f.id,
+        title: f.title,
+        responseCount: count || 0,
+        fields,
+        sampleData
+      };
+    }));
 
     const systemPrompt = `You are a dashboard configuration expert. Convert natural language requests into dashboard configurations.
 
-Available forms: ${JSON.stringify(formsContext, null, 2)}
+Available forms with actual data: ${JSON.stringify(formsContext, null, 2)}
+
+IMPORTANT: Only create widgets for forms that have responseCount > 0. Use the actual field names from the fields array and sampleData.
 
 Generate a dashboard config with this structure:
 {
@@ -56,21 +86,33 @@ Generate a dashboard config with this structure:
   "description": "Brief description",
   "widgets": [
     {
-      "type": "stat_card|bar_chart|line_chart|pie_chart|data_table|quick_stats|response_list",
+      "type": "stat_card|bar_chart|line_chart|pie_chart|data_table|quick_stats|response_list|map",
       "title": "Widget Title",
       "config": {
         "formId": "form_id_from_available_forms",
-        "metric": "count|field_name",
-        "groupBy": "field_name_or_null",
-        "dateField": "created_at_or_field_name",
-        "timeRange": "7d|30d|90d|all"
+        "metric": "count|actual_field_name_from_form",
+        "groupBy": "actual_field_name_or_null",
+        "dateField": "created_at|actual_date_field_name",
+        "timeRange": "7d|30d|90d|all",
+        "aggregation": "count|sum|avg|min|max",
+        "filters": {}
       },
       "position": { "x": 0, "y": 0, "w": 6, "h": 4 }
     }
   ]
 }
 
-Use appropriate widget types: stat_card for single metrics, bar_chart for categorical data, line_chart for trends, pie_chart for proportions, data_table for detailed views, response_list for recent items.`;
+Widget selection guide based on data:
+- stat_card: Single metrics (total count, averages)
+- bar_chart: Compare categories from select/radio fields
+- line_chart: Trends over time using created_at
+- pie_chart: Proportions/distributions of categorical data
+- data_table: Detailed views with multiple fields
+- response_list: Recent submissions
+- map: Geographic data visualization
+- quick_stats: Multiple related metrics together
+
+Use the sampleData to understand what values exist in fields and create meaningful groupBy and filters.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
