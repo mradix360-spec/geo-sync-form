@@ -6,6 +6,9 @@ verify_jwt = false
 [functions.natural-language-dashboard]
 verify_jwt = false
 
+[functions.natural-language-form]
+verify_jwt = false
+
 [functions.optimize-route]
 verify_jwt = false
 
