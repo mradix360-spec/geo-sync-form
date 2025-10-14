@@ -116,6 +116,15 @@ const AIInsightsView = () => {
     e?.preventDefault();
     if (!input.trim() || loading) return;
 
+    if (!user?.id) {
+      toast({
+        variant: "destructive",
+        title: "Authentication required",
+        description: "Please log in to use AI insights",
+      });
+      return;
+    }
+
     const userMessage: Message = {
       role: "user",
       content: input.trim(),
@@ -127,12 +136,14 @@ const AIInsightsView = () => {
     setLoading(true);
 
     try {
+      console.log("Sending request with userId:", user.id);
+      
       const { data, error } = await supabase.functions.invoke("analyze-responses", {
         body: { 
           query: userMessage.content,
           messages: [...messages, userMessage],
           formId: selectedForm !== "all" ? selectedForm : undefined,
-          userId: user?.id
+          userId: user.id
         },
       });
 
@@ -147,24 +158,33 @@ const AIInsightsView = () => {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error: any) {
-      console.error("Error analyzing responses:", error);
-      toast({
-        variant: "destructive",
-        title: "Analysis failed",
-        description: error.message || "Failed to analyze form responses",
-      });
-      
-      const errorMessage: Message = {
-        role: "assistant",
-        content: "Sorry, I encountered an error analyzing your data. Please try again.",
-        timestamp: new Date()
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setLoading(false);
+  } catch (error: any) {
+    console.error("Error analyzing responses:", error);
+    
+    let errorDescription = "Failed to analyze form responses";
+    
+    if (error.message?.includes("User ID is required")) {
+      errorDescription = "Authentication error. Please refresh the page and try again.";
+    } else if (error.message) {
+      errorDescription = error.message;
     }
-  };
+    
+    toast({
+      variant: "destructive",
+      title: "Analysis failed",
+      description: errorDescription,
+    });
+      
+    const errorMessage: Message = {
+      role: "assistant",
+      content: "Sorry, I encountered an error analyzing your data. Please try again.",
+      timestamp: new Date()
+    };
+    setMessages((prev) => [...prev, errorMessage]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('en-US', { 
