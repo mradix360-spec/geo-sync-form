@@ -33,7 +33,8 @@ const Register = () => {
 
     try {
       await register(email, password, fullName, phoneNumber, orgName || undefined);
-      // Will redirect to org request page if no org assigned
+      // Redirect to waiting page after successful registration
+      navigate('/auth/org-request', { replace: true });
     } catch (error) {
       console.error("Registration failed:", error);
     } finally {
