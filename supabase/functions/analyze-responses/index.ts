@@ -41,6 +41,42 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY not configured");
     }
 
+    // Fetch form schemas for context
+    let formsContext = "";
+    const { data: formsData } = await supabaseClient
+      .from("forms")
+      .select("id, title, schema, description")
+      .eq("organisation_id", userData.organisation_id);
+
+    if (formsData && formsData.length > 0) {
+      formsContext = "\n\nAvailable Forms:\n" + formsData.map(f => {
+        const fields = f.schema?.fields || [];
+        const fieldList = fields.map((field: any) => 
+          `- ${field.label || field.name} (${field.type})${field.required ? ' [required]' : ''}`
+        ).join('\n  ');
+        return `Form: "${f.title}" (ID: ${f.id})\n  Fields:\n  ${fieldList}`;
+      }).join('\n\n');
+    }
+
+    // If analyzing a specific form, get sample data structure
+    let dataStructureContext = "";
+    if (formId && formsData) {
+      const specificForm = formsData.find(f => f.id === formId);
+      if (specificForm) {
+        const { data: sampleResponses } = await supabaseClient
+          .from("form_responses")
+          .select("geojson")
+          .eq("form_id", formId)
+          .limit(1);
+        
+        if (sampleResponses && sampleResponses.length > 0) {
+          const sampleProps = sampleResponses[0].geojson?.properties || {};
+          const fieldNames = Object.keys(sampleProps);
+          dataStructureContext = `\n\nCurrent form data structure:\nFields in responses: ${fieldNames.join(', ')}`;
+        }
+      }
+    }
+
     // Define available tools for the AI
     const tools = [
       {
@@ -95,19 +131,23 @@ serve(async (req) => {
 
     const systemPrompt = `You are an AI assistant that helps analyze form response data. You have access to functions to query and count form responses.
 ${formId ? `You are currently analyzing data from a specific form.` : `You are analyzing data from all forms in the organization.`}
+${formsContext}
+${dataStructureContext}
 
 When analyzing data:
-- Be specific and provide clear insights
+- You have FULL ACCESS to all form schemas, field names, field types, and actual response data
+- DO NOT ask users about field names, data types, or data structure - you can see everything
+- Use the query_form_responses function to access actual data values
+- Be specific and provide clear insights based on the actual data
 - Use appropriate filters based on the user's question
 - Format numbers and dates clearly
-- Highlight key findings and trends
-- Suggest follow-up questions when relevant
-- If looking at specific form data, focus on that form's responses
-- Present data in a clear, organized way with bullet points or numbered lists when appropriate
+- Highlight key findings and trends from the actual data
+- Present data in a clear, organized way with bullet points or numbered lists
 - When users ask about locations, maps, or spatial data, use include_map: true in your query
-- Format responses with markdown for better readability (use bullet points, numbered lists)
+- For questions about specific fields, refer to the form schemas above to understand field types
+- Automatically analyze the data without asking for clarification about available fields
 
-The form responses contain GeoJSON data with properties that may include various field values like ratings, text responses, selections, file uploads, etc. The geometry field contains location data (Point, LineString, Polygon).`;
+The form responses contain GeoJSON data with properties that include the field values defined in the form schemas above. The geometry field contains location data (Point, LineString, Polygon).`;
 
     // Call Lovable AI
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -196,8 +236,16 @@ The form responses contain GeoJSON data with properties that may include various
             });
           }
 
+          // Get all unique field names from responses
+          const allFieldNames = new Set<string>();
+          filteredData.forEach((r: any) => {
+            const props = r.geojson?.properties || {};
+            Object.keys(props).forEach(key => allFieldNames.add(key));
+          });
+
           const result: any = {
             count: filteredData.length,
+            available_fields: Array.from(allFieldNames),
             responses: filteredData.map((r: any) => ({
               form: r.forms.title,
               created_at: r.created_at,
