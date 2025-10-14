@@ -18,6 +18,12 @@ const Login = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
+      // Check if user has an approved organization
+      if (!user.organisation_id) {
+        navigate('/auth/org-request', { replace: true });
+        return;
+      }
+      
       // Redirect based on role
       const isFieldStaff = user.roles.includes('field_staff');
       const redirectPath = isFieldStaff ? '/field' : '/analyst';
