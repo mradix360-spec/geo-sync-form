@@ -238,7 +238,13 @@ Remember: You're not just a data reporter - you're a data storyteller and insigh
           let query = supabaseClient
             .from("form_responses")
             .select(`
-              *,
+              id,
+              form_id,
+              user_id,
+              created_at,
+              updated_at,
+              geojson,
+              geom,
               forms!inner(title, organisation_id)
             `)
             .eq("forms.organisation_id", userData.organisation_id)
@@ -299,24 +305,44 @@ Remember: You're not just a data reporter - you're a data storyteller and insigh
 
           // Add map data if requested
           if (args.include_map) {
-            const locations = filteredData
-              .filter((r: any) => r.geom || r.geojson?.geometry)
-              .map((r: any) => {
-                const geom = r.geojson?.geometry;
-                if (geom?.type === 'Point' && geom.coordinates) {
-                  return {
-                    lat: geom.coordinates[1],
-                    lng: geom.coordinates[0],
-                    properties: r.geojson?.properties || {}
-                  };
+            const locations = [];
+            
+            for (const r of filteredData) {
+              let geometry = null;
+              
+              // Try to get geometry from geojson first
+              if (r.geojson?.geometry) {
+                geometry = r.geojson.geometry;
+              } 
+              // If geom (PostGIS) exists but geojson.geometry doesn't, convert it
+              else if (r.geom) {
+                try {
+                  // Use ST_AsGeoJSON to convert PostGIS geometry to GeoJSON
+                  const { data: geomData } = await supabaseClient
+                    .rpc('st_asgeojson', { geom: r.geom })
+                    .single();
+                  
+                  if (geomData) {
+                    geometry = typeof geomData === 'string' ? JSON.parse(geomData) : geomData;
+                  }
+                } catch (err) {
+                  console.error('Error converting PostGIS geometry:', err);
                 }
-                return null;
-              })
-              .filter(Boolean);
+              }
+              
+              // Extract coordinates for Point geometries
+              if (geometry?.type === 'Point' && geometry.coordinates) {
+                locations.push({
+                  lat: geometry.coordinates[1],
+                  lng: geometry.coordinates[0],
+                  properties: r.geojson?.properties || {}
+                });
+              }
+            }
 
             if (locations.length > 0) {
-              const avgLat = locations.reduce((sum: number, loc: any) => sum + loc.lat, 0) / locations.length;
-              const avgLng = locations.reduce((sum: number, loc: any) => sum + loc.lng, 0) / locations.length;
+              const avgLat = locations.reduce((sum, loc) => sum + loc.lat, 0) / locations.length;
+              const avgLng = locations.reduce((sum, loc) => sum + loc.lng, 0) / locations.length;
               
               result.mapData = {
                 features: locations,
