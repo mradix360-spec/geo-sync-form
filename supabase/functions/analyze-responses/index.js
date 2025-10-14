@@ -17,6 +17,14 @@ serve(async (req) => {
     const { query, messages, formId, userId } = await req.json();
     console.log("Query received:", query, "FormId:", formId, "UserId:", userId);
 
+    // Detect spatial intent to ensure map data is included when relevant
+    const combinedText = [
+      typeof query === "string" ? query : "",
+      ...(Array.isArray(messages) ? messages.map((m: any) => (m?.content ?? "")) : [])
+    ].join(" ").toLowerCase();
+    const spatialKeywords = ["map","location","where","geograph","near","distance","cluster","heatmap","spatial","coordinate","lat","lng","longitude","latitude","point","polygon","line","route"];
+    const forceIncludeMap = spatialKeywords.some(k => combinedText.includes(k));
+
     if (!userId) {
       throw new Error("User ID is required");
     }
@@ -229,7 +237,11 @@ Remember: You're not just a data reporter - you're a data storyteller and insigh
 
       for (const toolCall of toolCalls) {
         const functionName = toolCall.function.name;
-        const args = JSON.parse(toolCall.function.arguments);
+        let args = JSON.parse(toolCall.function.arguments);
+        // Ensure map data is fetched when the user asks spatial questions
+        if (functionName === "query_form_responses" && forceIncludeMap) {
+          args.include_map = true;
+        }
         console.log(`Executing function: ${functionName}`, args);
 
         let result;
@@ -328,7 +340,6 @@ Remember: You're not just a data reporter - you're a data storyteller and insigh
                 } catch (err) {
                   console.error('Error converting PostGIS geometry:', err);
                 }
-              }
               
               // Extract coordinates for Point geometries
               if (geometry?.type === 'Point' && geometry.coordinates) {
@@ -457,11 +468,68 @@ Remember: You're not just a data reporter - you're a data storyteller and insigh
     );
     }
 
+    // Fallback: if no tool calls were made but the user asked for a map, build basic mapData
+    let fallbackMapData = null;
+    let fallbackStats = null;
+    if (forceIncludeMap) {
+      try {
+        let fbQuery = supabaseClient
+          .from("form_responses")
+          .select(`
+            id,
+            form_id,
+            created_at,
+            geojson,
+            geom,
+            forms!inner(organisation_id)
+          `)
+          .eq("forms.organisation_id", userData.organisation_id)
+          .order("created_at", { ascending: false })
+          .limit(200);
+        if (formId) {
+          fbQuery = fbQuery.eq("form_id", formId);
+        }
+        const { data: fbData } = await fbQuery;
+
+        const locations: any[] = [];
+        for (const r of (fbData || [])) {
+          let geometry = r?.geojson?.geometry || null;
+          if (!geometry && r?.geom) {
+            try {
+              const { data: geomData } = await supabaseClient
+                .rpc("st_asgeojson", { geom: r.geom })
+                .single();
+              if (geomData) {
+                geometry = typeof geomData === "string" ? JSON.parse(geomData) : geomData;
+              }
+            } catch (_) {
+              // ignore
+            }
+          }
+          if (geometry?.type === "Point" && Array.isArray(geometry.coordinates)) {
+            locations.push({
+              lat: geometry.coordinates[1],
+              lng: geometry.coordinates[0],
+              properties: r?.geojson?.properties || {}
+            });
+          }
+        }
+        if (locations.length > 0) {
+          const avgLat = locations.reduce((sum, loc) => sum + loc.lat, 0) / locations.length;
+          const avgLng = locations.reduce((sum, loc) => sum + loc.lng, 0) / locations.length;
+          fallbackMapData = { features: locations, center: [avgLat, avgLng], zoom: 10 };
+          fallbackStats = { total: locations.length };
+        }
+      } catch (e) {
+        console.error("Fallback mapData build failed:", e);
+      }
+    }
+
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         response: finalResponse,
-        mapData: null,
-        stats: null
+        mapData: fallbackMapData,
+        stats: fallbackStats
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
