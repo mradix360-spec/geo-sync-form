@@ -13,30 +13,26 @@ serve(async (req) => {
   }
 
   try {
-    const { query, messages, formId } = await req.json();
-    console.log("Query received:", query, "FormId:", formId);
+    const { query, messages, formId, userId } = await req.json();
+    console.log("Query received:", query, "FormId:", formId, "UserId:", userId);
+
+    if (!userId) {
+      throw new Error("User ID is required");
+    }
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const authHeader = req.headers.get("Authorization");
-    const token = authHeader?.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
-
-    if (authError || !user) {
-      throw new Error("Unauthorized");
-    }
-
-    // Get user's organisation
-    const { data: userData } = await supabaseClient
+    // Get user's organisation using the provided userId
+    const { data: userData, error: userError } = await supabaseClient
       .from("users")
       .select("organisation_id")
-      .eq("id", user.id)
+      .eq("id", userId)
       .single();
 
-    if (!userData?.organisation_id) {
+    if (userError || !userData?.organisation_id) {
       throw new Error("User organisation not found");
     }
 

@@ -127,17 +127,12 @@ const AIInsightsView = () => {
     setLoading(true);
 
     try {
-      // Get the user token from localStorage
-      const token = localStorage.getItem('auth_token');
-      
       const { data, error } = await supabase.functions.invoke("analyze-responses", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         body: { 
           query: userMessage.content,
           messages: [...messages, userMessage],
-          formId: selectedForm !== "all" ? selectedForm : undefined
+          formId: selectedForm !== "all" ? selectedForm : undefined,
+          userId: user?.id
         },
       });
 
