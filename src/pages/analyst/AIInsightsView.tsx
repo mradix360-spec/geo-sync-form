@@ -410,6 +410,77 @@ const AIInsightsView = () => {
                             {/* Map Display */}
                             {message.mapData && (
                               <div className="mt-4 rounded-xl overflow-hidden border-2 border-border shadow-lg">
+                                <div className="bg-muted/50 px-3 py-2 flex items-center justify-between border-b">
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <MapPin className="w-3 h-3" />
+                                    {message.mapData.features.length} locations
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-7 text-xs"
+                                      onClick={() => {
+                                        const geoJson = {
+                                          type: "FeatureCollection",
+                                          features: message.mapData!.features.map(f => ({
+                                            type: "Feature",
+                                            geometry: {
+                                              type: "Point",
+                                              coordinates: [f.lng, f.lat]
+                                            },
+                                            properties: f.properties || {}
+                                          }))
+                                        };
+                                        const dataStr = JSON.stringify(geoJson, null, 2);
+                                        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                                        const exportFileDefaultName = `ai-insights-${new Date().getTime()}.geojson`;
+                                        const linkElement = document.createElement('a');
+                                        linkElement.setAttribute('href', dataUri);
+                                        linkElement.setAttribute('download', exportFileDefaultName);
+                                        linkElement.click();
+                                        toast({
+                                          title: "Map exported",
+                                          description: "GeoJSON file downloaded successfully",
+                                        });
+                                      }}
+                                    >
+                                      <Download className="w-3 h-3 mr-1" />
+                                      GeoJSON
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-7 text-xs"
+                                      onClick={() => {
+                                        const mapElement = document.querySelector('.leaflet-container');
+                                        if (mapElement) {
+                                          import('html2canvas').then((html2canvas) => {
+                                            html2canvas.default(mapElement as HTMLElement).then((canvas) => {
+                                              const link = document.createElement('a');
+                                              link.download = `ai-insights-map-${new Date().getTime()}.png`;
+                                              link.href = canvas.toDataURL();
+                                              link.click();
+                                              toast({
+                                                title: "Screenshot saved",
+                                                description: "Map image downloaded successfully",
+                                              });
+                                            });
+                                          }).catch(() => {
+                                            toast({
+                                              variant: "destructive",
+                                              title: "Export failed",
+                                              description: "Please use browser screenshot instead",
+                                            });
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      <Download className="w-3 h-3 mr-1" />
+                                      Image
+                                    </Button>
+                                  </div>
+                                </div>
                                 <MapContainer
                                   center={message.mapData.center}
                                   zoom={message.mapData.zoom}
