@@ -51,6 +51,20 @@ CRITICAL INSTRUCTIONS:
    - Polygon: Areas, zones, regions
    - null: No geographic data
 
+IMPORTANT - POSTGIS GEOMETRY HANDLING:
+⚠️ NEVER create separate latitude/longitude fields in the form!
+⚠️ Geographic location is automatically handled by PostGIS geometry fields
+⚠️ When users need to collect location data:
+   - Set geometry_type to "Point", "LineString", or "Polygon" 
+   - The system will automatically capture and store geometry data using PostGIS
+   - DO NOT add fields named "latitude", "longitude", "lat", "lng", "coordinates", etc.
+   - The geometry field is separate from form fields and handled by the map interface
+   
+Example: If user asks "create a form to collect tree locations with species name"
+- Set geometry_type: "Point" (for the location)
+- Add field: { name: "species_name", label: "Tree Species", type: "text" }
+- DO NOT add latitude/longitude fields - PostGIS handles this automatically!
+
 5. Multi-Page Forms:
    - For surveys with 8+ fields, create multiple pages for better UX
    - Group related fields into logical pages
