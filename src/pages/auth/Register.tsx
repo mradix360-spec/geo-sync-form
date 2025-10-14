@@ -17,10 +17,10 @@ const Register = () => {
   const [orgName, setOrgName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Redirect if already logged in
+  // Redirect if already logged in with organization
   useEffect(() => {
-    if (user) {
-      // Redirect based on role
+    if (user && user.organisation_id) {
+      // Redirect based on role only if they have an organization
       const isFieldStaff = user.roles.includes('field_staff');
       const redirectPath = isFieldStaff ? '/field' : '/analyst';
       navigate(redirectPath, { replace: true });
