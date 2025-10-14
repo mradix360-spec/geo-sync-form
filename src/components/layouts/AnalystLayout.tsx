@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/use-role";
 import { Button } from "@/components/ui/button";
 import { SyncStatus } from "@/components/SyncStatus";
-import { FileText, Map, BarChart3, Settings, LogOut, Menu, X, Shield, FolderOpen } from "lucide-react";
+import { FileText, Map, BarChart3, Settings, LogOut, Menu, X, Shield, FolderOpen, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const AnalystLayout = () => {
@@ -32,6 +32,7 @@ const AnalystLayout = () => {
   const navItems = [
     { to: "/analyst/content", icon: FolderOpen, label: "Content" },
     { to: "/analyst/forms", icon: FileText, label: "Forms" },
+    { to: "/analyst/insights", icon: Sparkles, label: "AI Insights" },
     { to: "/analyst/maps", icon: Map, label: "Maps" },
     { to: "/analyst/dashboards", icon: BarChart3, label: "Dashboards" },
     { to: "/analyst/settings", icon: Settings, label: "Settings" },

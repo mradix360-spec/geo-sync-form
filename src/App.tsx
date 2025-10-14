@@ -28,6 +28,7 @@ import SettingsView from "./pages/analyst/SettingsView";
 import AdminDashboard from "./pages/analyst/AdminDashboard";
 import SuperAdminDashboard from "./pages/analyst/SuperAdminDashboard";
 import ContentManagementPage from "./pages/analyst/ContentManagementPage";
+import AIInsightsView from "./pages/analyst/AIInsightsView";
 
 // Field staff pages
 import FieldForms from "./pages/field/FieldForms";
@@ -101,6 +102,7 @@ function App() {
                   <Route index element={<AnalystDashboard />} />
                     <Route path="content" element={<ContentManagementPage />} />
                     <Route path="forms" element={<FormsView />} />
+                    <Route path="insights" element={<AIInsightsView />} />
                     <Route path="maps" element={<MapsView />} />
                     <Route path="dashboards" element={<DashboardsView />} />
                     <Route path="settings" element={<SettingsView />} />

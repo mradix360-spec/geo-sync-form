@@ -13,8 +13,8 @@ serve(async (req) => {
   }
 
   try {
-    const { query, messages } = await req.json();
-    console.log("Query received:", query);
+    const { query, messages, formId } = await req.json();
+    console.log("Query received:", query, "FormId:", formId);
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -94,15 +94,18 @@ serve(async (req) => {
     ];
 
     const systemPrompt = `You are an AI assistant that helps analyze form response data. You have access to functions to query and count form responses.
+${formId ? `You are currently analyzing data from a specific form.` : `You are analyzing data from all forms in the organization.`}
 
 When analyzing data:
 - Be specific and provide clear insights
 - Use appropriate filters based on the user's question
 - Format numbers and dates clearly
-- Highlight key findings
+- Highlight key findings and trends
 - Suggest follow-up questions when relevant
+- If looking at specific form data, focus on that form's responses
+- Present data in a clear, organized way with bullet points or numbered lists when appropriate
 
-The form responses contain GeoJSON data with properties that may include various field values like ratings, text responses, selections, etc.`;
+The form responses contain GeoJSON data with properties that may include various field values like ratings, text responses, selections, file uploads, etc.`;
 
     // Call Lovable AI
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -156,6 +159,11 @@ The form responses contain GeoJSON data with properties that may include various
             .order("created_at", { ascending: false })
             .limit(args.limit || 100);
 
+          // Filter by specific form if provided
+          if (formId) {
+            query = query.eq("form_id", formId);
+          }
+
           if (args.days_ago) {
             const dateThreshold = new Date();
             dateThreshold.setDate(dateThreshold.getDate() - args.days_ago);
@@ -197,8 +205,13 @@ The form responses contain GeoJSON data with properties that may include various
         } else if (functionName === "count_responses") {
           let query = supabaseClient
             .from("form_responses")
-            .select("id", { count: "exact", head: true })
+            .select("id, forms!inner(organisation_id)", { count: "exact", head: true })
             .eq("forms.organisation_id", userData.organisation_id);
+
+          // Filter by specific form if provided
+          if (formId) {
+            query = query.eq("form_id", formId);
+          }
 
           if (args.days_ago) {
             const dateThreshold = new Date();
