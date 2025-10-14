@@ -9,7 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { 
   Loader2, 
   Sparkles, 
-  TrendingUp, 
   Calendar, 
   Star, 
   MessageSquare,
@@ -17,8 +16,8 @@ import {
   BarChart3,
   Send,
   MapPin,
-  Download,
-  Code2
+  Code2,
+  Download
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useForms } from "@/hooks/use-forms";
@@ -538,7 +537,7 @@ const AIInsightsView = () => {
                 {loading && (
                   <div className="flex justify-start animate-fade-in">
                     <div className="bg-card border border-border rounded-2xl p-5 shadow-lg">
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary via-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
                           <Loader2 className="w-4 h-4 text-white animate-spin" />
                         </div>
