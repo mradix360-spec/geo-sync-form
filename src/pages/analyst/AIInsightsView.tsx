@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,16 +15,48 @@ import {
   MessageSquare,
   Database,
   BarChart3,
-  Send
+  Send,
+  MapPin,
+  Download,
+  Code2
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useForms } from "@/hooks/use-forms";
 import { useAuth } from "@/contexts/AuthContext";
+import { MapContainer, TileLayer, Marker, Popup, CircleMarker } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+
+// Fix Leaflet default marker icon
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+});
+
+interface MapData {
+  type: "map";
+  features: Array<{
+    lat: number;
+    lng: number;
+    properties: any;
+  }>;
+  center: [number, number];
+  zoom: number;
+}
 
 interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  mapData?: MapData;
+  stats?: {
+    total: number;
+    by_form?: Record<string, number>;
+    avg_rating?: number;
+    recent_count?: number;
+  };
 }
 
 interface QuickAction {
@@ -41,31 +73,38 @@ const AIInsightsView = () => {
   const [selectedForm, setSelectedForm] = useState<string>("all");
   const { forms, loading: formsLoading } = useForms();
   const { user } = useAuth();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const quickActions: QuickAction[] = [
     {
       label: "Last 7 Days",
       query: "Show me all responses from the last 7 days with a summary",
       icon: Calendar,
-      gradient: "from-blue-500 to-cyan-500"
+      gradient: "from-blue-500 via-blue-600 to-cyan-500"
     },
     {
       label: "Low Ratings",
       query: "Show me responses with ratings below 3 stars and explain the patterns",
       icon: Star,
-      gradient: "from-orange-500 to-red-500"
+      gradient: "from-orange-500 via-red-500 to-pink-500"
     },
     {
-      label: "Response Trends",
-      query: "Analyze response trends over time and highlight any unusual patterns",
-      icon: TrendingUp,
-      gradient: "from-purple-500 to-pink-500"
+      label: "Map View",
+      query: "Show me all responses on a map with their locations",
+      icon: MapPin,
+      gradient: "from-emerald-500 via-teal-500 to-cyan-500"
     },
     {
       label: "Summary Stats",
       query: "Give me a comprehensive summary of all form responses with key statistics",
       icon: BarChart3,
-      gradient: "from-green-500 to-emerald-500"
+      gradient: "from-purple-500 via-violet-500 to-pink-500"
     }
   ];
 
@@ -101,7 +140,9 @@ const AIInsightsView = () => {
       const assistantMessage: Message = {
         role: "assistant",
         content: data.response,
-        timestamp: new Date()
+        timestamp: new Date(),
+        mapData: data.mapData,
+        stats: data.stats
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -128,6 +169,54 @@ const AIInsightsView = () => {
     return date.toLocaleTimeString('en-US', { 
       hour: '2-digit', 
       minute: '2-digit' 
+    });
+  };
+
+  const formatContent = (content: string) => {
+    // Split by code blocks
+    const parts = content.split(/(```[\s\S]*?```)/g);
+    
+    return parts.map((part, i) => {
+      if (part.startsWith('```')) {
+        const code = part.replace(/```(\w+)?\n?/, '').replace(/```$/, '');
+        return (
+          <div key={i} className="my-3 rounded-lg overflow-hidden border border-border/50">
+            <div className="bg-muted/50 px-3 py-1 text-xs text-muted-foreground flex items-center gap-2">
+              <Code2 className="w-3 h-3" />
+              Code
+            </div>
+            <pre className="bg-muted p-3 overflow-x-auto text-xs">
+              <code>{code}</code>
+            </pre>
+          </div>
+        );
+      }
+      
+      // Format bullet points
+      const lines = part.split('\n');
+      return (
+        <div key={i}>
+          {lines.map((line, j) => {
+            if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
+              return (
+                <div key={j} className="flex gap-2 my-1">
+                  <span className="text-primary mt-1">•</span>
+                  <span>{line.replace(/^[\-\*]\s/, '')}</span>
+                </div>
+              );
+            }
+            if (line.trim().match(/^\d+\.\s/)) {
+              return (
+                <div key={j} className="flex gap-2 my-1">
+                  <span className="text-primary font-semibold">{line.match(/^\d+\./)?.[0]}</span>
+                  <span>{line.replace(/^\d+\.\s/, '')}</span>
+                </div>
+              );
+            }
+            return line ? <p key={j} className="my-1">{line}</p> : <br key={j} />;
+          })}
+        </div>
+      );
     });
   };
 
@@ -174,36 +263,42 @@ const AIInsightsView = () => {
 
       {/* Quick Actions */}
       {messages.length === 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickActions.map((action) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in">
+          {quickActions.map((action, idx) => (
             <button
               key={action.label}
               onClick={() => handleQuickAction(action.query)}
-              className="group relative overflow-hidden rounded-xl p-6 text-left transition-all hover:scale-105 hover:shadow-xl"
+              className="group relative overflow-hidden rounded-2xl p-6 text-left transition-all hover:scale-[1.02] hover:shadow-2xl border border-border/50"
+              style={{ animationDelay: `${idx * 0.1}s` }}
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} opacity-10 group-hover:opacity-20 transition-opacity`} />
+              <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} opacity-[0.07] group-hover:opacity-[0.15] transition-all duration-300`} />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="relative">
-                <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${action.gradient} flex items-center justify-center mb-3 shadow-lg`}>
-                  <action.icon className="w-6 h-6 text-white" />
+                <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${action.gradient} flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform`}>
+                  <action.icon className="w-7 h-7 text-white" />
                 </div>
-                <h3 className="font-semibold text-foreground mb-1">{action.label}</h3>
-                <p className="text-xs text-muted-foreground line-clamp-2">{action.query}</p>
+                <h3 className="font-bold text-foreground mb-2 text-lg">{action.label}</h3>
+                <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{action.query}</p>
               </div>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-full blur-2xl -mr-12 -mt-12" />
             </button>
           ))}
         </div>
       )}
 
       {/* Chat Interface */}
-      <Card className="flex-1 border-2">
-        <CardHeader className="border-b bg-gradient-to-r from-primary/5 via-purple-500/5 to-pink-500/5">
-          <CardTitle className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
+      <Card className="flex-1 border-2 shadow-2xl animate-scale-in">
+        <CardHeader className="border-b bg-gradient-to-r from-primary/10 via-purple-500/10 to-pink-500/10 backdrop-blur-sm">
+          <CardTitle className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary via-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+              <Sparkles className="w-5 h-5 text-white animate-pulse" />
             </div>
-            <span>Conversation</span>
+            <div className="flex-1">
+              <span className="text-lg">AI Conversation</span>
+              <p className="text-xs text-muted-foreground font-normal">Powered by advanced AI</p>
+            </div>
             {selectedForm !== "all" && (
-              <Badge variant="secondary" className="ml-auto">
+              <Badge variant="secondary" className="ml-auto px-3 py-1">
                 {forms.find(f => f.id === selectedForm)?.title || "Unknown Form"}
               </Badge>
             )}
@@ -212,22 +307,38 @@ const AIInsightsView = () => {
 
         <CardContent className="p-0 flex flex-col h-[calc(100vh-400px)]">
           {/* Messages */}
-          <ScrollArea className="flex-1 p-6">
+          <ScrollArea className="flex-1 p-6" ref={scrollRef}>
             {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center mb-4">
-                  <MessageSquare className="w-10 h-10 text-primary" />
+              <div className="flex flex-col items-center justify-center h-full text-center py-12 animate-fade-in">
+                <div className="relative w-24 h-24 mb-6">
+                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/20 via-purple-500/20 to-pink-500/20 animate-pulse" />
+                  <div className="absolute inset-2 rounded-2xl bg-gradient-to-br from-primary/30 to-purple-500/30 flex items-center justify-center">
+                    <MessageSquare className="w-12 h-12 text-primary" />
+                  </div>
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Start exploring your data</h3>
-                <p className="text-sm text-muted-foreground max-w-md mb-6">
+                <h3 className="text-xl font-bold mb-3 bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
+                  Start exploring your data
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-md mb-8 leading-relaxed">
                   Use the quick actions above or type your own question to get AI-powered insights
                   from your form responses
                 </p>
-                <div className="space-y-2 text-xs text-muted-foreground">
-                  <p className="font-semibold text-foreground">Example questions:</p>
-                  <p>"How many responses were submitted this month?"</p>
-                  <p>"What's the average rating for customer satisfaction?"</p>
-                  <p>"Show me responses with negative feedback"</p>
+                <div className="space-y-3 text-sm text-muted-foreground max-w-lg">
+                  <p className="font-semibold text-foreground flex items-center gap-2 justify-center">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    Example questions:
+                  </p>
+                  <div className="grid gap-2">
+                    <div className="p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                      "How many responses were submitted this month?"
+                    </div>
+                    <div className="p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                      "What's the average rating for customer satisfaction?"
+                    </div>
+                    <div className="p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                      "Show me all responses on a map"
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -235,39 +346,114 @@ const AIInsightsView = () => {
                 {messages.map((message, index) => (
                   <div
                     key={index}
-                    className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                    className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-2xl p-4 shadow-sm ${
+                      className={`max-w-[85%] rounded-2xl shadow-lg ${
                         message.role === "user"
-                          ? "bg-gradient-to-br from-primary to-purple-500 text-primary-foreground"
-                          : "bg-muted"
+                          ? "bg-gradient-to-br from-primary via-purple-500 to-purple-600 text-primary-foreground"
+                          : "bg-card border border-border"
                       }`}
                     >
-                      <div className="flex items-start gap-3">
-                        {message.role === "assistant" && (
-                          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center flex-shrink-0 mt-1">
-                            <Sparkles className="w-4 h-4 text-white" />
+                      <div className="p-5">
+                        <div className="flex items-start gap-4">
+                          {message.role === "assistant" && (
+                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary via-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 shadow-lg">
+                              <Sparkles className="w-4 h-4 text-white" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm leading-relaxed">
+                              {formatContent(message.content)}
+                            </div>
+                            
+                            {/* Stats Display */}
+                            {message.stats && (
+                              <div className="mt-4 grid grid-cols-2 gap-3">
+                                <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                                  <div className="text-xs text-muted-foreground mb-1">Total Responses</div>
+                                  <div className="text-2xl font-bold text-primary">{message.stats.total}</div>
+                                </div>
+                                {message.stats.avg_rating && (
+                                  <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                                    <div className="text-xs text-muted-foreground mb-1">Avg Rating</div>
+                                    <div className="text-2xl font-bold text-amber-600 flex items-center gap-1">
+                                      {message.stats.avg_rating.toFixed(1)}
+                                      <Star className="w-4 h-4" />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* Map Display */}
+                            {message.mapData && (
+                              <div className="mt-4 rounded-xl overflow-hidden border-2 border-border shadow-lg">
+                                <MapContainer
+                                  center={message.mapData.center}
+                                  zoom={message.mapData.zoom}
+                                  style={{ height: "400px", width: "100%" }}
+                                  className="z-0"
+                                >
+                                  <TileLayer
+                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                                  />
+                                  {message.mapData.features.map((feature, i) => (
+                                    <CircleMarker
+                                      key={i}
+                                      center={[feature.lat, feature.lng]}
+                                      radius={8}
+                                      pathOptions={{
+                                        fillColor: "#8b5cf6",
+                                        fillOpacity: 0.6,
+                                        color: "#6d28d9",
+                                        weight: 2
+                                      }}
+                                    >
+                                      <Popup>
+                                        <div className="text-sm">
+                                          {Object.entries(feature.properties || {}).map(([key, value]) => (
+                                            <div key={key} className="mb-1">
+                                              <span className="font-semibold">{key}:</span> {String(value)}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </Popup>
+                                    </CircleMarker>
+                                  ))}
+                                </MapContainer>
+                              </div>
+                            )}
+                            
+                            <p className={`text-xs mt-3 flex items-center gap-2 ${
+                              message.role === "user" ? "text-primary-foreground/70" : "text-muted-foreground"
+                            }`}>
+                              <span>{formatTime(message.timestamp)}</span>
+                              {message.mapData && (
+                                <Badge variant="outline" className="text-xs">
+                                  <MapPin className="w-3 h-3 mr-1" />
+                                  {message.mapData.features.length} locations
+                                </Badge>
+                              )}
+                            </p>
                           </div>
-                        )}
-                        <div className="flex-1">
-                          <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
-                          <p className={`text-xs mt-2 ${message.role === "user" ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                            {formatTime(message.timestamp)}
-                          </p>
                         </div>
                       </div>
                     </div>
                   </div>
                 ))}
                 {loading && (
-                  <div className="flex justify-start">
-                    <div className="bg-muted rounded-2xl p-4 shadow-sm">
-                      <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center">
+                  <div className="flex justify-start animate-fade-in">
+                    <div className="bg-card border border-border rounded-2xl p-5 shadow-lg">
+                      <div className="flex items-center gap-4">
+                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary via-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
                           <Loader2 className="w-4 h-4 text-white animate-spin" />
                         </div>
-                        <span className="text-sm text-muted-foreground">Analyzing your data...</span>
+                        <div className="space-y-1">
+                          <span className="text-sm font-medium">Analyzing your data</span>
+                          <p className="text-xs text-muted-foreground">This may take a few moments...</p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -277,37 +463,48 @@ const AIInsightsView = () => {
           </ScrollArea>
 
           {/* Input Area */}
-          <div className="border-t p-4 bg-card">
-            <form onSubmit={handleSubmit} className="flex gap-2">
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask a question about your form data..."
-                className="min-h-[60px] max-h-[120px] resize-none"
-                disabled={loading}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit();
-                  }
-                }}
-              />
+          <div className="border-t p-5 bg-gradient-to-br from-card to-muted/20 backdrop-blur-sm">
+            <form onSubmit={handleSubmit} className="flex gap-3">
+              <div className="flex-1 relative">
+                <Textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Ask me anything about your form data..."
+                  className="min-h-[70px] max-h-[140px] resize-none pr-10 border-2 focus:border-primary/50 transition-colors"
+                  disabled={loading}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit();
+                    }
+                  }}
+                />
+                <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
+                  {input.length}/500
+                </div>
+              </div>
               <Button 
                 type="submit" 
                 disabled={loading || !input.trim()}
                 size="icon"
-                className="h-[60px] w-[60px] bg-gradient-to-br from-primary to-purple-500 hover:opacity-90"
+                className="h-[70px] w-[70px] rounded-xl bg-gradient-to-br from-primary via-purple-500 to-pink-500 hover:scale-105 hover:shadow-xl transition-all shadow-lg"
               >
                 {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-6 h-6 animate-spin" />
                 ) : (
-                  <Send className="w-5 h-5" />
+                  <Send className="w-6 h-6" />
                 )}
               </Button>
             </form>
-            <p className="text-xs text-muted-foreground mt-2">
-              Press Enter to send, Shift+Enter for new line
-            </p>
+            <div className="flex items-center justify-between mt-3">
+              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                Press <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs">Enter</kbd> to send
+              </p>
+              <p className="text-xs text-muted-foreground">
+                <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs">Shift</kbd> + <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs">Enter</kbd> for new line
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

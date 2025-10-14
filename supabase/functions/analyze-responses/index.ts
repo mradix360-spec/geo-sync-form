@@ -51,7 +51,7 @@ serve(async (req) => {
         type: "function",
         function: {
           name: "query_form_responses",
-          description: "Query form responses from the database with optional filters",
+          description: "Query form responses from the database with optional filters. Returns location data if available.",
           parameters: {
             type: "object",
             properties: {
@@ -70,6 +70,10 @@ serve(async (req) => {
               max_rating: {
                 type: "number",
                 description: "Maximum rating value to filter by (if rating field exists)",
+              },
+              include_map: {
+                type: "boolean",
+                description: "Set to true to include spatial/location data for map visualization",
               },
             },
           },
@@ -104,8 +108,10 @@ When analyzing data:
 - Suggest follow-up questions when relevant
 - If looking at specific form data, focus on that form's responses
 - Present data in a clear, organized way with bullet points or numbered lists when appropriate
+- When users ask about locations, maps, or spatial data, use include_map: true in your query
+- Format responses with markdown for better readability (use bullet points, numbered lists)
 
-The form responses contain GeoJSON data with properties that may include various field values like ratings, text responses, selections, file uploads, etc.`;
+The form responses contain GeoJSON data with properties that may include various field values like ratings, text responses, selections, file uploads, etc. The geometry field contains location data (Point, LineString, Polygon).`;
 
     // Call Lovable AI
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -194,13 +200,64 @@ The form responses contain GeoJSON data with properties that may include various
             });
           }
 
-          result = {
+          const result: any = {
             count: filteredData.length,
             responses: filteredData.map((r: any) => ({
               form: r.forms.title,
               created_at: r.created_at,
               data: r.geojson?.properties || {},
             })),
+          };
+
+          // Add map data if requested
+          if (args.include_map) {
+            const locations = filteredData
+              .filter((r: any) => r.geom || r.geojson?.geometry)
+              .map((r: any) => {
+                const geom = r.geojson?.geometry;
+                if (geom?.type === 'Point' && geom.coordinates) {
+                  return {
+                    lat: geom.coordinates[1],
+                    lng: geom.coordinates[0],
+                    properties: r.geojson?.properties || {}
+                  };
+                }
+                return null;
+              })
+              .filter(Boolean);
+
+            if (locations.length > 0) {
+              const avgLat = locations.reduce((sum: number, loc: any) => sum + loc.lat, 0) / locations.length;
+              const avgLng = locations.reduce((sum: number, loc: any) => sum + loc.lng, 0) / locations.length;
+              
+              result.mapData = {
+                features: locations,
+                center: [avgLat, avgLng],
+                zoom: 10
+              };
+            }
+          }
+
+          // Calculate statistics
+          let totalRating = 0;
+          let ratingCount = 0;
+          
+          filteredData.forEach((r: any) => {
+            const properties = r.geojson?.properties || {};
+            Object.entries(properties).forEach(([key, value]) => {
+              if (key.toLowerCase().includes('rating') || key.toLowerCase().includes('stars')) {
+                const rating = parseInt(value as string);
+                if (!isNaN(rating)) {
+                  totalRating += rating;
+                  ratingCount++;
+                }
+              }
+            });
+          });
+
+          result.stats = {
+            total: filteredData.length,
+            avg_rating: ratingCount > 0 ? totalRating / ratingCount : undefined
           };
         } else if (functionName === "count_responses") {
           let query = supabaseClient
@@ -255,12 +312,43 @@ The form responses contain GeoJSON data with properties that may include various
         throw new Error("Failed to get final AI response");
       }
 
-      const finalData = await finalAiResponse.json();
-      finalResponse = finalData.choices[0].message.content;
+    const finalData = await finalAiResponse.json();
+    finalResponse = finalData.choices[0].message.content;
+
+    // Extract mapData and stats from tool results if they exist
+    let mapData = null;
+    let stats = null;
+    
+    for (const toolResult of toolResults) {
+      try {
+        const resultContent = JSON.parse(toolResult.content);
+        if (resultContent.mapData) {
+          mapData = resultContent.mapData;
+        }
+        if (resultContent.stats) {
+          stats = resultContent.stats;
+        }
+      } catch (e) {
+        // Ignore parsing errors
+      }
     }
 
     return new Response(
-      JSON.stringify({ response: finalResponse }),
+      JSON.stringify({ 
+        response: finalResponse,
+        mapData,
+        stats
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+    }
+
+    return new Response(
+      JSON.stringify({ 
+        response: finalResponse,
+        mapData: null,
+        stats: null
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
