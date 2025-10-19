@@ -79,8 +79,8 @@ const FieldStaffLayout = () => {
       </main>
 
       {/* Modern Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border shadow-lg z-50">
-        <div className="grid grid-cols-3 gap-1 px-2 py-2">
+      <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border shadow-lg z-50 safe-area-inset-bottom">
+        <div className="grid grid-cols-4 px-1 py-2 max-w-2xl mx-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
@@ -88,17 +88,31 @@ const FieldStaffLayout = () => {
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`group relative flex flex-col items-center justify-center py-3 px-3 rounded-xl transition-all duration-300 ${
+                className={`group relative flex flex-col items-center justify-center py-2.5 px-2 rounded-xl transition-all duration-300 ${
                   active
-                    ? "bg-gradient-to-br from-primary to-secondary text-white shadow-[var(--shadow-glow)]"
-                    : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
+                {/* Active indicator */}
                 {active && (
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-xl opacity-20 blur-xl"></div>
+                  <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-8 h-1 bg-gradient-to-r from-primary to-secondary rounded-full shadow-[var(--shadow-glow)]"></div>
                 )}
-                <Icon className={`w-6 h-6 mb-1 transition-transform ${active ? 'scale-110' : 'group-hover:scale-105'}`} />
-                <span className={`text-xs font-semibold ${active ? 'font-bold' : ''}`}>{item.label}</span>
+                
+                {/* Icon background for active state */}
+                <div className={`relative mb-1 p-2 rounded-xl transition-all duration-300 ${
+                  active 
+                    ? 'bg-primary/10 scale-105' 
+                    : 'group-hover:bg-accent/50 group-hover:scale-105'
+                }`}>
+                  <Icon className="w-5 h-5" />
+                </div>
+                
+                <span className={`text-[10px] font-medium transition-all ${
+                  active ? 'font-bold' : ''
+                }`}>
+                  {item.label}
+                </span>
               </button>
             );
           })}
