@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/use-role";
-import { FileText, Database, User, LogOut } from "lucide-react";
+import { FileText, Database, User, LogOut, ClipboardList } from "lucide-react";
 import { SyncStatus } from "@/components/SyncStatus";
 import { Button } from "@/components/ui/button";
 import { syncService } from "@/lib/syncService";
@@ -40,6 +40,7 @@ const FieldStaffLayout = () => {
 
   const navItems = [
     { path: "/field", icon: FileText, label: "Forms" },
+    { path: "/field/inspections", icon: ClipboardList, label: "Inspections" },
     { path: "/field/offline", icon: Database, label: "Offline" },
     { path: "/field/profile", icon: User, label: "Profile" },
   ];

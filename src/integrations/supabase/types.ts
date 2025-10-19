@@ -14,6 +14,126 @@ export type Database = {
   }
   public: {
     Tables: {
+      asset_imports: {
+        Row: {
+          errors: Json | null
+          failed_imports: number | null
+          file_name: string
+          file_url: string | null
+          id: string
+          import_type: Database["public"]["Enums"]["import_type"]
+          imported_at: string | null
+          imported_by: string | null
+          organisation_id: string | null
+          successful_imports: number | null
+          total_records: number | null
+        }
+        Insert: {
+          errors?: Json | null
+          failed_imports?: number | null
+          file_name: string
+          file_url?: string | null
+          id?: string
+          import_type: Database["public"]["Enums"]["import_type"]
+          imported_at?: string | null
+          imported_by?: string | null
+          organisation_id?: string | null
+          successful_imports?: number | null
+          total_records?: number | null
+        }
+        Update: {
+          errors?: Json | null
+          failed_imports?: number | null
+          file_name?: string
+          file_url?: string | null
+          id?: string
+          import_type?: Database["public"]["Enums"]["import_type"]
+          imported_at?: string | null
+          imported_by?: string | null
+          organisation_id?: string | null
+          successful_imports?: number | null
+          total_records?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_imports_imported_by_fkey"
+            columns: ["imported_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_imports_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assets: {
+        Row: {
+          asset_id: string
+          coordinates: unknown | null
+          created_at: string | null
+          created_by: string | null
+          geojson: Json | null
+          id: string
+          metadata: Json | null
+          model_url: string | null
+          name: string
+          organisation_id: string | null
+          status: Database["public"]["Enums"]["asset_status"] | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          asset_id: string
+          coordinates?: unknown | null
+          created_at?: string | null
+          created_by?: string | null
+          geojson?: Json | null
+          id?: string
+          metadata?: Json | null
+          model_url?: string | null
+          name: string
+          organisation_id?: string | null
+          status?: Database["public"]["Enums"]["asset_status"] | null
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          asset_id?: string
+          coordinates?: unknown | null
+          created_at?: string | null
+          created_by?: string | null
+          geojson?: Json | null
+          id?: string
+          metadata?: Json | null
+          model_url?: string | null
+          name?: string
+          organisation_id?: string | null
+          status?: Database["public"]["Enums"]["asset_status"] | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assets_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_widgets: {
         Row: {
           config: Json
@@ -382,6 +502,167 @@ export type Database = {
           },
           {
             foreignKeyName: "forms_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inspection_responses: {
+        Row: {
+          asset_id: string | null
+          completed_at: string | null
+          created_at: string | null
+          form_response_id: string | null
+          gps_accuracy: number | null
+          gps_location: unknown | null
+          id: string
+          inspection_mode: Database["public"]["Enums"]["inspection_mode"] | null
+          notes: string | null
+          photos: Json | null
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          asset_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          form_response_id?: string | null
+          gps_accuracy?: number | null
+          gps_location?: unknown | null
+          id?: string
+          inspection_mode?:
+            | Database["public"]["Enums"]["inspection_mode"]
+            | null
+          notes?: string | null
+          photos?: Json | null
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          asset_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          form_response_id?: string | null
+          gps_accuracy?: number | null
+          gps_location?: unknown | null
+          id?: string
+          inspection_mode?:
+            | Database["public"]["Enums"]["inspection_mode"]
+            | null
+          notes?: string | null
+          photos?: Json | null
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_responses_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_responses_form_response_id_fkey"
+            columns: ["form_response_id"]
+            isOneToOne: false
+            referencedRelation: "form_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_responses_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "inspection_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_responses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inspection_tasks: {
+        Row: {
+          asset_group_ids: Json | null
+          asset_id: string | null
+          completed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          form_id: string | null
+          id: string
+          organisation_id: string | null
+          priority: Database["public"]["Enums"]["inspection_priority"] | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["inspection_status"] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          asset_group_ids?: Json | null
+          asset_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          form_id?: string | null
+          id?: string
+          organisation_id?: string | null
+          priority?: Database["public"]["Enums"]["inspection_priority"] | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["inspection_status"] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          asset_group_ids?: Json | null
+          asset_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          form_id?: string | null
+          id?: string
+          organisation_id?: string | null
+          priority?: Database["public"]["Enums"]["inspection_priority"] | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["inspection_status"] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_tasks_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_tasks_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_tasks_organisation_id_fkey"
             columns: ["organisation_id"]
             isOneToOne: false
             referencedRelation: "organisations"
@@ -857,6 +1138,62 @@ export type Database = {
           srtext?: string | null
         }
         Relationships: []
+      }
+      task_assignments: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          group_id: string | null
+          id: string
+          task_id: string
+          user_id: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          group_id?: string | null
+          id?: string
+          task_id: string
+          user_id?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          group_id?: string | null
+          id?: string
+          task_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_assignments_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "form_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_assignments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "inspection_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_activity: {
         Row: {
@@ -2876,6 +3213,11 @@ export type Database = {
     }
     Enums: {
       app_role: "super_admin" | "org_admin" | "field_staff" | "analyst"
+      asset_status: "active" | "inactive" | "maintenance" | "decommissioned"
+      import_type: "csv" | "geojson" | "manual"
+      inspection_mode: "form" | "camera" | "vr"
+      inspection_priority: "low" | "medium" | "high" | "critical"
+      inspection_status: "pending" | "in_progress" | "completed" | "cancelled"
     }
     CompositeTypes: {
       geometry_dump: {
@@ -3012,6 +3354,11 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["super_admin", "org_admin", "field_staff", "analyst"],
+      asset_status: ["active", "inactive", "maintenance", "decommissioned"],
+      import_type: ["csv", "geojson", "manual"],
+      inspection_mode: ["form", "camera", "vr"],
+      inspection_priority: ["low", "medium", "high", "critical"],
+      inspection_status: ["pending", "in_progress", "completed", "cancelled"],
     },
   },
 } as const

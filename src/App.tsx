@@ -29,11 +29,18 @@ import AdminDashboard from "./pages/analyst/AdminDashboard";
 import SuperAdminDashboard from "./pages/analyst/SuperAdminDashboard";
 import ContentManagementPage from "./pages/analyst/ContentManagementPage";
 import AIInsightsView from "./pages/analyst/AIInsightsView";
+import TrackingView from "./pages/analyst/TrackingView";
+import InspectionView from "./pages/analyst/InspectionView";
 
 // Field staff pages
+import FieldInspections from "./pages/field/FieldInspections";
 import FieldForms from "./pages/field/FieldForms";
 import OfflineDataManager from "./pages/field/OfflineDataManager";
 import FieldProfile from "./pages/field/FieldProfile";
+
+// Tracking pages
+import AssetViewer from "./pages/tracking/AssetViewer";
+import InspectionPerform from "./pages/tracking/InspectionPerform";
 
 // Shared pages
 import FormBuilder from "./pages/FormBuilder";
@@ -103,6 +110,8 @@ function App() {
                     <Route path="content" element={<ContentManagementPage />} />
                     <Route path="forms" element={<FormsView />} />
                     <Route path="insights" element={<AIInsightsView />} />
+                    <Route path="tracking" element={<TrackingView />} />
+                    <Route path="inspection" element={<InspectionView />} />
                     <Route path="maps" element={<MapsView />} />
                     <Route path="dashboards" element={<DashboardsView />} />
                     <Route path="settings" element={<SettingsView />} />
@@ -120,13 +129,23 @@ function App() {
                     }
                   >
                     <Route index element={<FieldForms />} />
+                    <Route path="inspections" element={<FieldInspections />} />
+                    <Route path="inspection/:taskId" element={<InspectionPerform />} />
                     <Route path="offline" element={<OfflineDataManager />} />
                     <Route path="profile" element={<FieldProfile />} />
                   </Route>
 
                   {/* Shared protected routes */}
                   <Route 
-                    path="/form-builder/:formId?" 
+                    path="/viewer" 
+                    element={
+                      <ProtectedRoute>
+                        <AssetViewer />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/form-builder/:formId?"
                     element={
                       <ProtectedRoute>
                         <FormBuilder />

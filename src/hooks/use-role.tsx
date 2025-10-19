@@ -19,6 +19,9 @@ export const useRole = () => {
   const canCreateDashboards = () => hasRole(['super_admin', 'org_admin', 'analyst']);
   const canViewMaps = () => hasRole(['super_admin', 'org_admin', 'analyst']);
   const canViewDashboards = () => hasRole(['super_admin', 'org_admin', 'analyst']);
+  const canManageAssets = () => hasRole(['super_admin', 'org_admin', 'analyst']);
+  const canCreateInspections = () => hasRole(['super_admin', 'org_admin', 'analyst']);
+  const canPerformInspections = () => hasRole(['field_staff', 'analyst', 'org_admin', 'super_admin']);
 
   return {
     hasRole,
@@ -32,6 +35,9 @@ export const useRole = () => {
     canCreateDashboards,
     canViewMaps,
     canViewDashboards,
+    canManageAssets,
+    canCreateInspections,
+    canPerformInspections,
     roles: user?.roles || []
   };
 };
