@@ -235,21 +235,25 @@ const InspectionPerform = () => {
 
               <TabsContent value="camera" className="space-y-4 mt-6">
                 <CameraCapture
+                  taskId={task.id}
                   onPhotoCapture={handlePhotoCapture}
                   photos={photos}
                   onRemovePhoto={handleRemovePhoto}
                 />
                 
                 <div className="space-y-2 mt-4">
-                  <Label htmlFor="notes">Inspection Notes</Label>
+                  <Label htmlFor="notes">Inspection Notes (Optional)</Label>
                   <Textarea
                     id="notes"
-                    placeholder="Add notes about this inspection..."
+                    placeholder="Add observations, issues found, or recommendations..."
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={4}
                     className="resize-none"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    {notes.length} characters
+                  </p>
                 </div>
               </TabsContent>
 
