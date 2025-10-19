@@ -2,13 +2,22 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { CreateTaskDialog } from '@/components/inspection/CreateTaskDialog';
+import { TaskAssignmentDialog } from '@/components/inspection/TaskAssignmentDialog';
 import { TaskStatistics } from '@/components/inspection/TaskStatistics';
 import { TaskCard } from '@/components/inspection/TaskCard';
 import { useInspectionTasks } from '@/hooks/use-inspection-tasks';
+import { InspectionTask } from '@/types/tracking';
 
 const InspectionView = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<InspectionTask | null>(null);
   const { tasks, loading, refetch } = useInspectionTasks();
+
+  const handleAssign = (task: InspectionTask) => {
+    setSelectedTask(task);
+    setShowAssignDialog(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -35,7 +44,11 @@ const InspectionView = () => {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} />
+            <TaskCard 
+              key={task.id} 
+              task={task}
+              onAssign={handleAssign}
+            />
           ))}
         </div>
       )}
@@ -45,6 +58,15 @@ const InspectionView = () => {
         onOpenChange={setShowCreateDialog}
         onSuccess={refetch}
       />
+
+      {selectedTask && (
+        <TaskAssignmentDialog
+          task={selectedTask}
+          open={showAssignDialog}
+          onOpenChange={setShowAssignDialog}
+          onSuccess={refetch}
+        />
+      )}
     </div>
   );
 };

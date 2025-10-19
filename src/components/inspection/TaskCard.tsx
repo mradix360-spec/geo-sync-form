@@ -2,13 +2,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { InspectionTask } from '@/types/tracking';
-import { Calendar, MapPin, CheckCircle2, Play } from 'lucide-react';
+import { Calendar, MapPin, CheckCircle2, Play, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface TaskCardProps {
   task: InspectionTask;
   onViewDetails?: () => void;
   onStartInspection?: () => void;
+  onAssign?: (task: InspectionTask) => void;
   showActions?: boolean;
 }
 
@@ -26,7 +27,7 @@ const statusColors = {
   cancelled: 'bg-red-500',
 };
 
-export const TaskCard = ({ task, onViewDetails, onStartInspection, showActions = true }: TaskCardProps) => {
+export const TaskCard = ({ task, onViewDetails, onStartInspection, onAssign, showActions = true }: TaskCardProps) => {
   return (
     <Card className="hover:shadow-lg transition-shadow">
       <CardHeader>
@@ -73,16 +74,22 @@ export const TaskCard = ({ task, onViewDetails, onStartInspection, showActions =
         </div>
 
         {showActions && (
-          <div className="flex gap-2 pt-2">
+          <div className="flex flex-wrap gap-2 pt-2">
+            {onAssign && (
+              <Button variant="outline" size="sm" onClick={() => onAssign(task)} className="gap-2">
+                <UserPlus className="w-4 h-4" />
+                Assign
+              </Button>
+            )}
             {onViewDetails && (
-              <Button variant="outline" size="sm" onClick={onViewDetails} className="flex-1">
+              <Button variant="outline" size="sm" onClick={onViewDetails}>
                 View Details
               </Button>
             )}
             {onStartInspection && task.status === 'pending' && (
-              <Button size="sm" onClick={onStartInspection} className="flex-1 gap-2">
+              <Button size="sm" onClick={onStartInspection} className="gap-2">
                 <Play className="w-4 h-4" />
-                Start Inspection
+                Start
               </Button>
             )}
           </div>
