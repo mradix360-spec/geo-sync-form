@@ -6,9 +6,17 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, Clock, XCircle, Building2, Phone, Mail, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useRole } from "@/hooks/use-role";
+import { Navigate } from "react-router-dom";
 
 const OrgRequestPending = () => {
   const { user, logout } = useAuth();
+  const { isSuperAdmin } = useRole();
+
+  // Redirect super admins to their dashboard
+  if (isSuperAdmin()) {
+    return <Navigate to="/analyst" replace />;
+  }
 
   const { data: request, isLoading } = useQuery({
     queryKey: ['org-request', user?.id],
