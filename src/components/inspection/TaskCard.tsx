@@ -2,10 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { InspectionTask } from '@/types/tracking';
-import { Calendar, MapPin, CheckCircle2, Play, UserPlus, Package } from 'lucide-react';
+import { Calendar, MapPin, CheckCircle2, Play, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
-import { useAssets } from '@/hooks/use-assets';
-import { useMemo } from 'react';
 
 interface TaskCardProps {
   task: InspectionTask;
@@ -30,15 +28,6 @@ const statusColors = {
 };
 
 export const TaskCard = ({ task, onViewDetails, onStartInspection, onAssign, showActions = true }: TaskCardProps) => {
-  const { assets } = useAssets();
-  
-  const taskAssets = useMemo(() => {
-    if (!task.asset_group_ids || task.asset_group_ids.length === 0) return [];
-    return assets.filter(asset => task.asset_group_ids?.includes(asset.id));
-  }, [task.asset_group_ids, assets]);
-
-  const hasMultipleAssets = taskAssets.length > 0;
-
   return (
     <Card className="hover:shadow-lg transition-shadow">
       <CardHeader>
@@ -62,17 +51,10 @@ export const TaskCard = ({ task, onViewDetails, onStartInspection, onAssign, sho
         )}
 
         <div className="space-y-2 text-sm">
-          {task.asset && !hasMultipleAssets && (
+          {task.asset && (
             <div className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-muted-foreground" />
               <span>{task.asset.name}</span>
-            </div>
-          )}
-
-          {hasMultipleAssets && (
-            <div className="flex items-center gap-2">
-              <Package className="w-4 h-4 text-muted-foreground" />
-              <span className="font-medium">{taskAssets.length} assets assigned</span>
             </div>
           )}
 
