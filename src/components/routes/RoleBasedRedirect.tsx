@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 
 export const RoleBasedRedirect = () => {
   const { user, loading } = useAuth();
-  const { isFieldUser, isAnalyst, isAdmin } = useRole();
+  const { isFieldUser, isAnalyst, isAdmin, isSuperAdmin } = useRole();
 
   if (loading) {
     return (
@@ -17,6 +17,11 @@ export const RoleBasedRedirect = () => {
 
   if (!user) {
     return <Navigate to="/auth/login" replace />;
+  }
+
+  // Super admins don't need organization association
+  if (isSuperAdmin()) {
+    return <Navigate to="/analyst" replace />;
   }
 
   // Redirect users without organization to request page

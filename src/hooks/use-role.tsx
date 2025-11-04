@@ -9,6 +9,7 @@ export const useRole = () => {
     return user.roles.some(r => roles.includes(r));
   };
 
+  const isSuperAdmin = () => hasRole('super_admin');
   const isAdmin = () => hasRole(['super_admin', 'org_admin']);
   const isAnalyst = () => hasRole('analyst');
   const isFieldUser = () => hasRole('field_staff');
@@ -25,6 +26,7 @@ export const useRole = () => {
 
   return {
     hasRole,
+    isSuperAdmin,
     isAdmin,
     isAnalyst,
     isFieldUser,
