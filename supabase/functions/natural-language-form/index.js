@@ -33,17 +33,25 @@ CRITICAL INSTRUCTIONS:
    - Appropriate field types for each piece of information
    - Whether the form should have multiple pages for better UX
 
-3. Field types available:
+3. Field types available (ONLY USE THESE):
    - text: Short text input (names, IDs, short answers)
    - textarea: Long text input (descriptions, comments)
    - number: Numeric values (age, quantity, measurements)
-   - select: Dropdown selection (single choice)
-   - radio: Radio buttons (single choice)
-   - checkbox: Checkboxes (multiple choices)
+   - email: Email address input
+   - tel: Phone number input
+   - url: Website URL input
    - date: Date picker
    - time: Time picker
+   - datetime-local: Date and time picker combined
+   - select: Dropdown selection (single choice from list)
+   - radio: Radio buttons (single choice, visible options)
+   - checkbox: Checkboxes (multiple choices allowed)
    - file: File upload (photos, documents)
    - rating: Star rating (satisfaction scores, quality ratings)
+   - range: Slider for numeric range selection
+   - color: Color picker
+
+CRITICAL: NEVER use field types not in this list! NEVER create fields with empty or invalid types!
 
 4. Geometry types (if location/map data needed):
    - Point: Single location
@@ -102,7 +110,7 @@ FORM SCHEMA STRUCTURE (CRITICAL - FOLLOW EXACTLY):
     {
       "name": "field_name_snake_case",
       "label": "User-friendly field label",
-      "type": "text|textarea|number|select|radio|checkbox|date|time|file",
+      "type": "text|textarea|number|email|tel|url|date|time|datetime-local|select|radio|checkbox|file|rating|range|color",
       "required": true|false,
       "placeholder": "Optional placeholder text",
       "options": ["option1", "option2"], // Only for select, radio, checkbox
@@ -275,17 +283,41 @@ Now create a comprehensive form based on the user's request.`;
       }];
     }
 
-    // Ensure all fields have sectionId
+    // Validate field types
+    const validTypes = [
+      'text', 'textarea', 'number', 'email', 'tel', 'url', 
+      'date', 'time', 'datetime-local', 'select', 'radio', 
+      'checkbox', 'file', 'rating', 'range', 'color'
+    ];
+
+    // Ensure all fields have valid types and sectionId
     const firstSectionId = sections[0]?.id || 'section_1';
-    formSchema.fields = formSchema.fields.map((field: any) => ({
-      name: field.name || 'unnamed_field',
-      label: field.label || field.name || 'Unnamed Field',
-      type: field.type || 'text',
-      required: field.required === true,
-      placeholder: field.placeholder || '',
-      options: field.options || undefined,
-      sectionId: field.sectionId || firstSectionId,
-    }));
+    formSchema.fields = formSchema.fields
+      .filter((field: any) => field && field.name) // Remove fields without names
+      .map((field: any) => {
+        // Validate and fix field type
+        let fieldType = field.type || 'text';
+        if (!validTypes.includes(fieldType)) {
+          console.warn(`Invalid field type "${fieldType}" for field "${field.name}", defaulting to "text"`);
+          fieldType = 'text';
+        }
+
+        // Ensure options exist for choice-based fields
+        if (['select', 'radio', 'checkbox'].includes(fieldType) && (!field.options || !Array.isArray(field.options) || field.options.length === 0)) {
+          console.warn(`Field "${field.name}" of type "${fieldType}" missing options, defaulting to text`);
+          fieldType = 'text';
+        }
+
+        return {
+          name: field.name,
+          label: field.label || field.name || 'Unnamed Field',
+          type: fieldType,
+          required: field.required === true,
+          placeholder: field.placeholder || '',
+          options: (fieldType === 'select' || fieldType === 'radio' || fieldType === 'checkbox') ? field.options : undefined,
+          sectionId: field.sectionId || firstSectionId,
+        };
+      });
 
     // Include sections and multi-page settings in response
     const responseSchema = {

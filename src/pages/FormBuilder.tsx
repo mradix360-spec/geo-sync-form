@@ -173,6 +173,21 @@ const [fields, setFields] = useState<FormField[]>([
   };
 
   const updateField = (id: string, updates: Partial<FormField>) => {
+    // Prevent empty field types
+    if (updates.type === '') {
+      toast({
+        variant: "destructive",
+        title: "Invalid Field Type",
+        description: "Field type cannot be empty. Please select a valid type.",
+      });
+      return;
+    }
+    
+    // If changing to a type that doesn't need options, clear them
+    if (updates.type && !['select', 'radio', 'checkbox'].includes(updates.type)) {
+      updates.options = undefined;
+    }
+    
     setFields(fields.map(f => f.id === id ? { ...f, ...updates } : f));
   };
 
@@ -440,23 +455,32 @@ const [fields, setFields] = useState<FormField[]>([
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="text">Text</SelectItem>
+                              <SelectItem value="textarea">Text Area</SelectItem>
                               <SelectItem value="number">Number</SelectItem>
-                              <SelectItem value="date">Date</SelectItem>
                               <SelectItem value="email">Email</SelectItem>
                               <SelectItem value="tel">Phone</SelectItem>
                               <SelectItem value="url">URL</SelectItem>
-                              <SelectItem value="select">Select</SelectItem>
-                              <SelectItem value="textarea">Text Area</SelectItem>
+                              <SelectItem value="date">Date</SelectItem>
+                              <SelectItem value="time">Time</SelectItem>
+                              <SelectItem value="datetime-local">Date & Time</SelectItem>
+                              <SelectItem value="select">Dropdown (Single Choice)</SelectItem>
+                              <SelectItem value="radio">Radio Buttons (Single Choice)</SelectItem>
+                              <SelectItem value="checkbox">Checkboxes (Multiple Choice)</SelectItem>
                               <SelectItem value="file">File Upload</SelectItem>
-                              <SelectItem value="rating">Rating</SelectItem>
+                              <SelectItem value="rating">Star Rating</SelectItem>
+                              <SelectItem value="range">Slider</SelectItem>
+                              <SelectItem value="color">Color Picker</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         
-                        {/* Select Options */}
-                        {field.type === 'select' && (
+                        {/* Options for select, radio, and checkbox */}
+                        {(field.type === 'select' || field.type === 'radio' || field.type === 'checkbox') && (
                           <div className="col-span-2 space-y-2">
-                            <Label>Options (comma-separated)</Label>
+                            <Label>
+                              Options (comma-separated)
+                              {field.type === 'checkbox' && <span className="text-xs text-muted-foreground ml-2">(Users can select multiple)</span>}
+                            </Label>
                             <Input
                               value={field.options?.join(', ') || ''}
                               onChange={(e) => updateField(field.id, { 
@@ -515,6 +539,38 @@ const [fields, setFields] = useState<FormField[]>([
                           </div>
                         )}
 
+                        {/* Range/Slider Settings */}
+                        {field.type === 'range' && (
+                          <div className="col-span-2 grid gap-3 md:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label>Minimum Value</Label>
+                              <Input
+                                type="number"
+                                value={field.validation?.find(v => v.type === 'min')?.value || 0}
+                                onChange={(e) => {
+                                  const newValidation = [...(field.validation || [])].filter(v => v.type !== 'min');
+                                  newValidation.push({ type: 'min', value: parseFloat(e.target.value) || 0 });
+                                  updateField(field.id, { validation: newValidation });
+                                }}
+                                placeholder="0"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Maximum Value</Label>
+                              <Input
+                                type="number"
+                                value={field.validation?.find(v => v.type === 'max')?.value || 100}
+                                onChange={(e) => {
+                                  const newValidation = [...(field.validation || [])].filter(v => v.type !== 'max');
+                                  newValidation.push({ type: 'max', value: parseFloat(e.target.value) || 100 });
+                                  updateField(field.id, { validation: newValidation });
+                                }}
+                                placeholder="100"
+                              />
+                            </div>
+                          </div>
+                        )}
+
                         {/* Validation Rules */}
                         <div className="col-span-2">
                           <Collapsible>
@@ -531,7 +587,7 @@ const [fields, setFields] = useState<FormField[]>([
                             </CollapsibleTrigger>
                             <CollapsibleContent className="pt-4 space-y-3">
                               {/* Number validations */}
-                              {(field.type === 'number') && (
+                              {(field.type === 'number' || field.type === 'range') && (
                                 <div className="grid gap-3 md:grid-cols-2">
                                   <div className="space-y-2">
                                     <Label>Minimum Value</Label>

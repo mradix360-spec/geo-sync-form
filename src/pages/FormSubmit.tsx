@@ -860,6 +860,74 @@ const FormSubmit = () => {
                         </span>
                       )}
                     </div>
+                  ) : field.type === 'radio' ? (
+                    <div className="space-y-2">
+                      {field.options?.map((option) => (
+                        <div key={option} className="flex items-center space-x-2">
+                          <input
+                            type="radio"
+                            id={`${field.name}-${option}`}
+                            name={field.name}
+                            value={option}
+                            checked={formData[field.name] === option}
+                            onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
+                            required={field.required && visibleFields.has(field.name)}
+                            className="w-4 h-4 text-primary"
+                          />
+                          <Label htmlFor={`${field.name}-${option}`} className="font-normal cursor-pointer">
+                            {option}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  ) : field.type === 'checkbox' ? (
+                    <div className="space-y-2">
+                      {field.options?.map((option) => {
+                        const currentValues = formData[field.name] ? 
+                          (typeof formData[field.name] === 'string' ? formData[field.name].split(',') : formData[field.name]) 
+                          : [];
+                        const isChecked = currentValues.includes(option);
+                        
+                        return (
+                          <div key={option} className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`${field.name}-${option}`}
+                              value={option}
+                              checked={isChecked}
+                              onChange={(e) => {
+                                let newValues;
+                                if (e.target.checked) {
+                                  newValues = [...currentValues, option];
+                                } else {
+                                  newValues = currentValues.filter((v: string) => v !== option);
+                                }
+                                setFormData({ ...formData, [field.name]: newValues.join(',') });
+                              }}
+                              className="w-4 h-4 text-primary rounded"
+                            />
+                            <Label htmlFor={`${field.name}-${option}`} className="font-normal cursor-pointer">
+                              {option}
+                            </Label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : field.type === 'range' ? (
+                    <div className="space-y-2">
+                      <input
+                        type="range"
+                        id={field.name}
+                        min={field.validation?.find(v => v.type === 'min')?.value || 0}
+                        max={field.validation?.find(v => v.type === 'max')?.value || 100}
+                        value={formData[field.name] || field.validation?.find(v => v.type === 'min')?.value || 0}
+                        onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
+                        className="w-full"
+                      />
+                      <div className="text-sm text-muted-foreground text-center">
+                        Value: {formData[field.name] || field.validation?.find(v => v.type === 'min')?.value || 0}
+                      </div>
+                    </div>
                   ) : (
                     <Input
                       id={field.name}
