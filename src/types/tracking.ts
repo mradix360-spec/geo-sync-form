@@ -94,3 +94,14 @@ export interface ParsedAssetData {
   longitude?: number;
   metadata?: Record<string, any>;
 }
+
+export interface AssetGroup {
+  id: string;
+  organisation_id: string;
+  name: string;
+  description?: string;
+  asset_ids: string[];
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
