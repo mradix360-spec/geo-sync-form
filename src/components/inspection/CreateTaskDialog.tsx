@@ -56,17 +56,23 @@ export const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDi
         asset_group_ids = selectedGroup?.asset_ids || [];
       }
 
-      const { error } = await supabase.from('inspection_tasks').insert({
+      const taskData: any = {
         organisation_id: user.organisation_id,
-        asset_id: assetSelectionMode === 'single' ? (formData.asset_id || null) : null,
-        asset_group_ids: asset_group_ids.length > 0 ? asset_group_ids : null,
+        asset_id: assetSelectionMode === 'single' && formData.asset_id ? formData.asset_id : null,
         form_id: formData.form_id || null,
         title: formData.title,
         description: formData.description,
-        priority: formData.priority as any,
+        priority: formData.priority,
         due_date: formData.due_date || null,
         created_by: user.id,
-      } as any);
+      };
+
+      // Only add asset_group_ids if there are multiple assets selected
+      if (asset_group_ids.length > 0) {
+        taskData.asset_group_ids = asset_group_ids;
+      }
+
+      const { error } = await supabase.from('inspection_tasks').insert(taskData);
 
       if (error) throw error;
 
