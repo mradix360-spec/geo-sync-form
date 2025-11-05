@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -9,7 +9,7 @@ export const useAssetGroups = () => {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  const loadAssetGroups = async () => {
+  const loadAssetGroups = useCallback(async () => {
     if (!user?.organisation_id) {
       setAssetGroups([]);
       setLoading(false);
@@ -37,7 +37,7 @@ export const useAssetGroups = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.organisation_id]);
 
   const createAssetGroup = async (group: Partial<AssetGroup>) => {
     if (!user?.organisation_id) return;
@@ -120,7 +120,7 @@ export const useAssetGroups = () => {
 
   useEffect(() => {
     loadAssetGroups();
-  }, [user?.organisation_id]);
+  }, [loadAssetGroups]);
 
   return { assetGroups, loading, refetch: loadAssetGroups, createAssetGroup, updateAssetGroup, deleteAssetGroup };
 };

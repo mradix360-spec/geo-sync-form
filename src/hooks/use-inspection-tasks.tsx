@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -9,7 +9,7 @@ export const useInspectionTasks = (filterByAssigned: boolean = false) => {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     if (!user?.organisation_id) {
       setTasks([]);
       setLoading(false);
@@ -65,7 +65,7 @@ export const useInspectionTasks = (filterByAssigned: boolean = false) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.organisation_id, user?.id, filterByAssigned]);
 
   const deleteTask = async (id: string) => {
     try {
@@ -112,7 +112,7 @@ export const useInspectionTasks = (filterByAssigned: boolean = false) => {
 
   useEffect(() => {
     loadTasks();
-  }, [user?.organisation_id, filterByAssigned]);
+  }, [loadTasks]);
 
   return { tasks, loading, refetch: loadTasks, deleteTask, updateTaskStatus };
 };
