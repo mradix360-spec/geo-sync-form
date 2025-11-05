@@ -19,7 +19,7 @@ const InspectionView = () => {
   const [selectedTask, setSelectedTask] = useState<InspectionTask | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<AssetGroup | null>(null);
   const { tasks, loading, refetch } = useInspectionTasks();
-  const { assetGroups, loading: groupsLoading, deleteAssetGroup } = useAssetGroups();
+  const { assetGroups, loading: groupsLoading, deleteAssetGroup, refetch: refetchGroups } = useAssetGroups();
 
   const handleAssign = (task: InspectionTask) => {
     setSelectedTask(task);
@@ -170,7 +170,7 @@ const InspectionView = () => {
           if (!open) setSelectedGroup(null);
         }}
         group={selectedGroup}
-        onSuccess={refetch}
+        onSuccess={refetchGroups}
       />
     </div>
   );
