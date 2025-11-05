@@ -179,8 +179,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, onSuccess }: CreateTaskDi
                       {assets.map((asset) => (
                         <div
                           key={asset.id}
-                          className="flex items-center space-x-2 p-2 hover:bg-accent rounded-md cursor-pointer"
-                          onClick={() => toggleAssetSelection(asset.id)}
+                          className="flex items-center space-x-2 p-2 hover:bg-accent rounded-md"
                         >
                           <Checkbox
                             checked={formData.selected_asset_ids.includes(asset.id)}
